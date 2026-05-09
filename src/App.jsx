@@ -18,6 +18,12 @@ import AddHospital from './pages/Hosiptals/AddHospital';
 import ViewHospitals from './pages/Hosiptals/ViewHopitals';
 import Applications from './pages/Doctors/Applications'
 import ApplicationReview from './pages/Doctors/ApplicationReview';
+import DoctorForm from './pages/Doctors/dr';
+import DoctorList from './pages/Doctors/drlist';
+import HospitalForm from './pages/Doctors/HospitalForm';
+import HospitalList from './pages/Doctors/HospitalList';
+import MedicalForm from './pages/Doctors/MedicalForm';
+import MedicalList from './pages/Doctors/MedicalList';
 import Appointment from './pages/Appointment/Appointment';
 import Payments from './pages/Payments/Payments';
 import Reports from './pages/Reports/Reports';
@@ -52,7 +58,12 @@ function App() {
                 <Route path="onboard_list" element={<Applications />} />
                 <Route path="onboard_list/:id" element={<ApplicationReview />} />
                 <Route path="fee_parameter" element={<FeeStructure />} />
-                
+                <Route path="dr_form" element={<DoctorForm />} />
+                <Route path="dr_list" element={<DoctorList />} />
+                <Route path="hospital_form" element={<HospitalForm />} />
+                <Route path="hospital_list" element={<HospitalList />} />
+                <Route path="medical_form" element={<MedicalForm />} />
+                <Route path="medical_list" element={<MedicalList />} />
             </Route>
             <Route path="/hospitals" element={<Tabs_layout tabs={hospital_tabs} />} >
                 <Route path="" element={<ViewHospitals />} />
