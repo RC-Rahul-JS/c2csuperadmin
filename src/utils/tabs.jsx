@@ -5,10 +5,10 @@ export const doctortabs = [
     // { label: 'Edit Doctor', route: 'edit' },
     { label: 'Add Doctor', route: 'add' },
     { label: 'Fee Parameter', route: 'fee_parameter' },
-    { label: 'Dr Form', route: 'dr_form' },
-    { label: 'Dr List', route: 'dr_list' },
     { label: 'Hospital Form', route: 'hospital_form' },
     { label: 'Hospital List', route: 'hospital_list' },
+    { label: 'Dr Form', route: 'dr_form' },
+    { label: 'Dr List', route: 'dr_list' },
     { label: 'Medical Form', route: 'medical_form' },
     { label: 'Medical List', route: 'medical_list' },
   ];

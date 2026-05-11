@@ -61,7 +61,6 @@ const Sidebar = () => {
 
   // Define nav items with icons and paths
   const navItems = [
-    { name: 'Dashboard', path: '/', icon: HiHome },
     { name: 'Appointments', path: '/appointments', icon: HiCalendar },
     { name: 'Hospitals', path: '/hospitals', icon: HiOfficeBuilding },
     { name: 'Doctors', path: '/doctors', icon: HiUserGroup },

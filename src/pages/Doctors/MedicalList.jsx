@@ -124,13 +124,15 @@ const MedicalList = ({ submissions, onAction }) => {
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 relative">
       {/* Floating Back Buttons */}
-      <button
-        type="button"
-        onClick={selectedForm ? () => setSelectedForm(null) : onBack}
-        className="fixed top-4 left-4 z-50 px-4 py-2 bg-blue-900/40 backdrop-blur-md border border-white/20 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-900/60 transition-all shadow-lg"
-      >
-        {selectedForm ? '← Back to List' : '← Dashboard'}
-      </button>
+      {selectedForm && (
+        <button
+          type="button"
+          onClick={() => setSelectedForm(null)}
+          className="fixed top-4 left-4 z-50 px-4 py-2 bg-blue-900/40 backdrop-blur-md border border-white/20 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-900/60 transition-all shadow-lg"
+        >
+          ← Back to List
+        </button>
+      )}
 
       {/* Care2Connect Header Theme */}
       <div className="w-full bg-gradient-to-r from-[#0f172a] via-[#1e3a8a] to-[#3b82f6] pt-12 pb-24 px-6 text-center text-white">
