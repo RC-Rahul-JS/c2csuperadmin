@@ -9,6 +9,8 @@ const HospitalList = ({ submissions, onAction }) => {
   const [fullImage, setFullImage] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
 
   // Premium mock data
   const mockData = [
@@ -97,7 +99,7 @@ const HospitalList = ({ submissions, onAction }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetch('http://192.168.29.145:5000/c2c_app/hospital/requests', {
+    fetch('/c2c_app/hospital/requests', {
       headers: {
         'ngrok-skip-browser-warning': 'true'
       }
@@ -225,10 +227,10 @@ const HospitalList = ({ submissions, onAction }) => {
       reason: `Admin changed status to ${actionType}`
     };
 
-    console.log(`📤 [Hospital List] POSTing review action payload to http://192.168.29.145:5000/c2c_app/hospital/review/${id}:`, payload);
+    console.log(`📤 [Hospital List] POSTing review action payload to /c2c_app/hospital/review/${id}:`, payload);
 
     try {
-      const response = await fetch(`http://192.168.29.145:5000/c2c_app/hospital/review/${id}`, {
+      const response = await fetch(`/c2c_app/hospital/review/${id}`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -267,9 +269,27 @@ const HospitalList = ({ submissions, onAction }) => {
       const matchesSearch = sub.basicDetails?.hospitalName?.toLowerCase().includes(searchLower) ||
         sub.contactInfo?.phone?.includes(searchQuery);
       const matchesStatus = statusFilter === 'All' || sub.status?.toLowerCase() === statusFilter.toLowerCase();
-      return matchesSearch && matchesStatus;
+      
+      let matchesDate = true;
+      if (sub.date) {
+        const itemDate = new Date(sub.date);
+        if (fromDate) {
+          const start = new Date(fromDate);
+          start.setHours(0,0,0,0);
+          if (itemDate < start) matchesDate = false;
+        }
+        if (toDate) {
+          const end = new Date(toDate);
+          end.setHours(23,59,59,999);
+          if (itemDate > end) matchesDate = false;
+        }
+      } else if (fromDate || toDate) {
+        matchesDate = false;
+      }
+      
+      return matchesSearch && matchesStatus && matchesDate;
     });
-  }, [localSubmissions, searchQuery, statusFilter]);
+  }, [localSubmissions, searchQuery, statusFilter, fromDate, toDate]);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 relative">
@@ -335,6 +355,45 @@ const HospitalList = ({ submissions, onAction }) => {
                       {status}
                     </button>
                   ))}
+                </div>
+
+                {/* Date Filters */}
+                <div className="flex flex-col sm:flex-row items-center gap-3 pt-4 border-t border-slate-100 w-full">
+                  <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1.5 mr-2 self-start sm:self-auto select-none">
+                    <span>📅</span> Date Range:
+                  </div>
+                  
+                  <div className="flex items-center gap-2 w-full sm:w-auto flex-1 sm:flex-none">
+                    <div className="relative w-full sm:w-48">
+                      <input 
+                        type="date" 
+                        value={fromDate}
+                        onChange={(e) => setFromDate(e.target.value)}
+                        className="p-2.5 w-full bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:bg-white focus:border-indigo-600 text-slate-700"
+                      />
+                    </div>
+                    <span className="text-slate-400 text-xs font-bold">to</span>
+                    <div className="relative w-full sm:w-48">
+                      <input 
+                        type="date" 
+                        value={toDate}
+                        onChange={(e) => setToDate(e.target.value)}
+                        className="p-2.5 w-full bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:bg-white focus:border-indigo-600 text-slate-700"
+                      />
+                    </div>
+                  </div>
+
+                  {(fromDate || toDate) && (
+                    <button
+                      onClick={() => {
+                        setFromDate('');
+                        setToDate('');
+                      }}
+                      className="px-3.5 py-2.5 bg-red-50 hover:bg-red-100 border border-red-100 text-red-600 text-xs font-bold rounded-xl transition-all"
+                    >
+                      Clear Dates
+                    </button>
+                  )}
                 </div>
               </div>
 

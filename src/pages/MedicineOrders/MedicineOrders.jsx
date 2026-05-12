@@ -14,7 +14,8 @@ import {
   HiExternalLink,
   HiOutlineUser,
   HiOutlinePhone,
-  HiOutlineClipboardList
+  HiOutlineClipboardList,
+  HiUser
 } from 'react-icons/hi';
 
 const MedicineOrders = () => {
@@ -26,6 +27,10 @@ const MedicineOrders = () => {
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  
+  // Date Range state
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   
   // Detail Modal / Drawer state
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -41,7 +46,7 @@ const MedicineOrders = () => {
   const fetchOrders = () => {
     setIsLoading(true);
     setErrorInfo('');
-    fetch('http://192.168.29.145:5000/c2c_app/medicine/admin/orders', {
+    fetch('/c2c_app/medicine/admin/orders', {
       headers: {
         'ngrok-skip-browser-warning': 'true'
       }
@@ -76,6 +81,11 @@ const MedicineOrders = () => {
             remark: item.remark || 'No remark provided',
             status: item.status || 'Pending',
             date: item.created_at || '',
+            // New Patient details mapping
+            patientName: item.patient?.name || '',
+            patientDob: item.patient?.dob || '',
+            patientGender: item.patient?.gender || '',
+            patientFatherName: item.patient?.fatherName || '',
             raw: item
           };
         });
@@ -94,24 +104,47 @@ const MedicineOrders = () => {
     fetchOrders();
   }, []);
 
-  // Filter and Search logic
+  // Filter and Search logic with exact Date Range and Patient Name matching
   const filteredOrders = useMemo(() => {
     return orders.filter(order => {
+      // 1. Search filter
       const searchLower = searchQuery.toLowerCase();
       const matchesSearch = 
         order.userMobile.toLowerCase().includes(searchLower) ||
         order.doctorName.toLowerCase().includes(searchLower) ||
         order.storeName.toLowerCase().includes(searchLower) ||
+        order.patientName.toLowerCase().includes(searchLower) ||
         order.id.toString().toLowerCase().includes(searchLower) ||
         order.remark.toLowerCase().includes(searchLower);
 
+      // 2. Status filter
       const matchesStatus = 
         statusFilter === 'All' || 
         order.status.toLowerCase() === statusFilter.toLowerCase();
 
-      return matchesSearch && matchesStatus;
+      // 3. Date range filter
+      let matchesDate = true;
+      if (order.date) {
+        const orderDateObj = new Date(order.date);
+        
+        if (fromDate) {
+          const startDate = new Date(fromDate);
+          startDate.setHours(0, 0, 0, 0);
+          if (orderDateObj < startDate) matchesDate = false;
+        }
+        
+        if (toDate) {
+          const endDate = new Date(toDate);
+          endDate.setHours(23, 59, 59, 999);
+          if (orderDateObj > endDate) matchesDate = false;
+        }
+      } else if (fromDate || toDate) {
+        matchesDate = false;
+      }
+
+      return matchesSearch && matchesStatus && matchesDate;
     });
-  }, [orders, searchQuery, statusFilter]);
+  }, [orders, searchQuery, statusFilter, fromDate, toDate]);
 
   // Update order status via API
   const handleUpdateStatus = async (orderId, newStatus) => {
@@ -119,7 +152,7 @@ const MedicineOrders = () => {
     const lowercaseStatus = newStatus.toLowerCase();
     
     try {
-      const response = await fetch(`http://192.168.29.145:5000/c2c_app/medicine/admin/orders/update/${orderId}`, {
+      const response = await fetch(`/c2c_app/medicine/admin/orders/update/${orderId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -134,7 +167,7 @@ const MedicineOrders = () => {
       // Alternate standard patch endpoint
       if (!response.ok) {
         console.warn("Primary endpoint failed. Attempting alternative endpoint...");
-        await fetch(`http://192.168.29.145:5000/c2c_app/medicine/admin/orders/${orderId}`, {
+        await fetch(`/c2c_app/medicine/admin/orders/${orderId}`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -158,7 +191,6 @@ const MedicineOrders = () => {
       setUpdateRemark('');
     } catch (err) {
       console.error("Failed to persist status change on server:", err);
-      // Fallback update local state for presentation
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus, remark: updateRemark || o.remark } : o));
       if (selectedOrder && selectedOrder.id === orderId) {
         setSelectedOrder(prev => ({ ...prev, status: newStatus, remark: updateRemark || prev.remark }));
@@ -204,37 +236,78 @@ const MedicineOrders = () => {
         </button>
       </div>
 
-      {/* --- Controls: Filters and Search --- */}
-      <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-        {/* Search */}
-        <div className="relative w-full md:w-96">
-          <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-slate-400">
-            <HiSearch className="w-5 h-5" />
-          </span>
-          <input
-            type="text"
-            placeholder="Search mobile, doctor, store or ID..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 p-3 pl-11 rounded-xl text-xs font-bold outline-none focus:bg-white focus:border-purple-500 transition-all text-slate-800"
-          />
+      {/* --- Controls: Search, Status & Date Filter Range --- */}
+      <div className="bg-white rounded-2xl p-6 border border-slate-200/60 shadow-sm space-y-4">
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
+          {/* Search */}
+          <div className="relative w-full lg:w-96">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-slate-400">
+              <HiSearch className="w-5 h-5" />
+            </span>
+            <input
+              type="text"
+              placeholder="Search mobile, patient, store, doctor or ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 p-3 pl-11 rounded-xl text-xs font-bold outline-none focus:bg-white focus:border-purple-500 transition-all text-slate-800"
+            />
+          </div>
+
+          {/* Status Filters */}
+          <div className="flex flex-wrap gap-1 bg-slate-100 p-1 rounded-xl w-full lg:w-auto">
+            {['All', 'Pending', 'Confirmed', 'Out_for_delivery', 'Cancelled'].map((status) => (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status)}
+                className={`py-2.5 px-4 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                  statusFilter === status 
+                    ? 'bg-white text-purple-700 shadow-sm border border-slate-200' 
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                {status.replace(/_/g, ' ')}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Status Filters */}
-        <div className="flex flex-wrap gap-1 bg-slate-100 p-1 rounded-xl w-full md:w-auto">
-          {['All', 'Pending', 'Confirmed', 'Out_for_delivery', 'Cancelled'].map((status) => (
+        {/* Date Filter Panel */}
+        <div className="flex flex-col sm:flex-row items-center gap-3 pt-3 border-t border-slate-100 w-full">
+          <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1.5 mr-2 self-start sm:self-auto select-none">
+            <span>📅</span> Date Range:
+          </div>
+          
+          <div className="flex items-center gap-2 w-full sm:w-auto flex-1 sm:flex-none">
+            <div className="relative w-full sm:w-48">
+              <input 
+                type="date" 
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="p-2.5 w-full bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:bg-white focus:border-purple-500 text-slate-700"
+              />
+            </div>
+            <span className="text-slate-400 text-xs font-bold">to</span>
+            <div className="relative w-full sm:w-48">
+              <input 
+                type="date" 
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="p-2.5 w-full bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:bg-white focus:border-purple-500 text-slate-700"
+              />
+            </div>
+          </div>
+
+          {(fromDate || toDate) && (
             <button
-              key={status}
-              onClick={() => setStatusFilter(status)}
-              className={`py-2 px-4 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                statusFilter === status 
-                  ? 'bg-white text-purple-700 shadow-sm border border-slate-200' 
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
+              onClick={() => {
+                setFromDate('');
+                setToDate('');
+              }}
+              className="px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 border border-rose-100 text-rose-600 text-xs font-bold rounded-lg transition-all"
             >
-              {status.replace(/_/g, ' ')}
+              Clear Dates
             </button>
-          ))}
+          )}
         </div>
       </div>
 
@@ -260,6 +333,7 @@ const MedicineOrders = () => {
                 <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-black uppercase text-slate-500 tracking-wider">
                   <th className="px-6 py-4">Order ID</th>
                   <th className="px-6 py-4">User (Mobile)</th>
+                  <th className="px-6 py-4">Patient Name</th>
                   <th className="px-6 py-4">Store Name</th>
                   <th className="px-6 py-4">Linked Doctor</th>
                   <th className="px-6 py-4 text-center">Prescription</th>
@@ -287,8 +361,17 @@ const MedicineOrders = () => {
                       </span>
                     </td>
 
+                    {/* Patient Name */}
+                    <td className="px-6 py-4 text-xs font-normal text-slate-700">
+                      {order.patientName ? (
+                        order.patientName
+                      ) : (
+                        <span className="text-slate-400 font-normal">-</span>
+                      )}
+                    </td>
+
                     {/* Store Name */}
-                    <td className="px-6 py-4 text-xs font-black text-slate-900">
+                    <td className="px-6 py-4 text-xs font-bold text-slate-700">
                       🏪 {order.storeName}
                     </td>
 
@@ -447,6 +530,33 @@ const MedicineOrders = () => {
                 <div className="border border-dashed border-slate-200 bg-slate-50 rounded-xl p-6 text-center text-slate-400">
                   <HiPhotograph className="w-8 h-8 mx-auto mb-1 text-slate-300" />
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">No Image Attachment</p>
+                </div>
+              )}
+
+              {/* Patient Details Section */}
+              {selectedOrder.patientName && (
+                <div className="bg-purple-50/15 border border-purple-200/60 p-4 rounded-xl space-y-3">
+                  <h4 className="text-[10px] font-black uppercase text-purple-900 tracking-wider flex items-center gap-1">
+                    👤 Patient Details
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <span className="text-[8px] font-black text-slate-400 uppercase block">Name</span>
+                      <span className="font-bold text-slate-800">{selectedOrder.patientName}</span>
+                    </div>
+                    <div>
+                      <span className="text-[8px] font-black text-slate-400 uppercase block">Father's Name</span>
+                      <span className="font-bold text-slate-800">{selectedOrder.patientFatherName || '-'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[8px] font-black text-slate-400 uppercase block">Gender</span>
+                      <span className="font-bold text-slate-800">{selectedOrder.patientGender || '-'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[8px] font-black text-slate-400 uppercase block">DOB</span>
+                      <span className="font-bold text-slate-800">{selectedOrder.patientDob || '-'}</span>
+                    </div>
+                  </div>
                 </div>
               )}
 
