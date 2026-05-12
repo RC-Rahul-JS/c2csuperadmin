@@ -46,12 +46,15 @@ import BankDetails from './pages/setting/BankDetails';
 import FeeStructure from './pages/setting/FeeStructure';
 import PaymentReq from './pages/Payments/PaymentReq';
 
+import MedicineOrders from './pages/MedicineOrders/MedicineOrders';
+
 function App() {
   return (
     <Router>
         <Routes>
           <Route path="/login" element={<Login />} /> 
           <Route path="/" element={<Layout/>} >
+            <Route path="/medicine-orders" element={<MedicineOrders />} />
             <Route path="/doctors" element={<Tabs_layout tabs={doctortabs} />} >
                 <Route path="" element={<Doctors />} />
                 <Route path="add" element={<AddDoctor />} />
