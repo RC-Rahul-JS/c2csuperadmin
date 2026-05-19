@@ -60,6 +60,7 @@ function App() {
             <Route path="/doctors" element={<Tabs_layout tabs={doctortabs} />} >
                 <Route path="" element={<Doctors />} />
                 <Route path="add" element={<AddDoctor />} />
+                <Route path=":id/edit" element={<AddDoctor />} />
                 <Route path="onboard_list" element={<Applications />} />
                 <Route path="onboard_list/:id" element={<ApplicationReview />} />
                 <Route path="fee_parameter" element={<FeeStructure />} />

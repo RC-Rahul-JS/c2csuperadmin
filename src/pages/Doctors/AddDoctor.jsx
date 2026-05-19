@@ -93,10 +93,14 @@ const AddDoctor = () => {
     if (!formData.address) validationErrors.address = 'Address is required';
     if (!formData.speciality) validationErrors.speciality = 'Speciality is required';
     if (!formData.experience) validationErrors.experience = 'Experience is required';
-    if (!formData.password || formData.password.length < 6)
-      validationErrors.password = 'Password must be at least 6 characters';
-    if (formData.password !== formData.confirmPassword)
-      validationErrors.confirmPassword = 'Passwords do not match';
+    
+    // Validate password only if it is a new doctor or if the user is attempting to change it
+    if (!id || formData.password) {
+      if (!formData.password || formData.password.length < 6)
+        validationErrors.password = 'Password must be at least 6 characters';
+      if (formData.password !== formData.confirmPassword)
+        validationErrors.confirmPassword = 'Passwords do not match';
+    }
 
     return validationErrors;
   };
@@ -137,22 +141,39 @@ const AddDoctor = () => {
     }
   };
 
-  if(id){
-    useEffect(() => {
+  useEffect(() => {
+    if (id) {
       // Fetch doctor data if id is provided
       const fetchDoctorData = async () => {
         try {
           const response = await getData(`/admin/doctors/${id}`);
-          setFormData(response);
-          setImagePreview(response.imageUrl);
+          setFormData(prev => ({
+            ...prev,
+            ...response,
+            name: response.name || '',
+            email: response.email || '',
+            phone: response.phone || '',
+            state: response.state || '',
+            district: response.district || '',
+            address: response.address || '',
+            speciality: response.speciality || '',
+            experience: response.experience || '',
+            phonenumberID: response.phonenumberID || '',
+            whatsAppBusinessAccountID: response.whatsAppBusinessAccountID || '',
+            accessToken: response.accessToken || '',
+            imageUrl: response.imageUrl || '',
+            password: '',
+            confirmPassword: ''
+          }));
+          setImagePreview(response.imageUrl || '');
         } catch (error) {
           console.error('Failed to fetch doctor data:', error);
           showErrorAlert('Error', 'Failed to fetch doctor data');
         }
       };
       fetchDoctorData();
-    }, []);
-  }
+    }
+  }, [id, getData]);
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4 py-12">
@@ -372,7 +393,7 @@ const AddDoctor = () => {
               type="submit"
               className="w-full py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
             >
-              SUBMIT
+              {id ? 'UPDATE' : 'SUBMIT'}
             </button>
           </div>
         </form>
