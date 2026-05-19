@@ -19,7 +19,7 @@ useEffect(() => {
   (async () => {
     try {
       showLoader();
-      const res = await axios.get('https://api.care2connect.in/doctor_list');
+      const res = await axios.get('http://192.168.29.145:5000/doctor_list');
       const response = res.data;
 
       console.log(response)
@@ -34,7 +34,7 @@ useEffect(() => {
 
       // now fetch images one by one in background
       response.forEach(async (doc, index) => {
-        if (doc?.documents?.photo) {
+        if (doc?.photo) {
           const url = await imageUrl(doc.documents.photo);
           if (url) {
             setlist(prev =>

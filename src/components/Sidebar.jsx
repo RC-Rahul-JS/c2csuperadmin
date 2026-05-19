@@ -54,6 +54,7 @@ import {
   HiCog,
   HiLogout,
   HiClipboardList,
+  HiUsers,
 } from 'react-icons/hi';
 import { MdAccountTree } from "react-icons/md";
 
@@ -66,6 +67,7 @@ const Sidebar = () => {
     { name: 'Hospitals', path: '/hospitals', icon: HiOfficeBuilding },
     { name: 'Doctors', path: '/doctors', icon: HiUserGroup },
     { name: 'Staff', path: '/staff', icon: HiUserGroup },
+    { name: 'Users', path: '/users', icon: HiUsers },
     { name: 'Medicine Orders', path: '/medicine-orders', icon: HiClipboardList },
     { name: 'Payments', path: '/payments', icon: HiCreditCard },
     { name: 'Accounting', path: '/accounting', icon: MdAccountTree  },
