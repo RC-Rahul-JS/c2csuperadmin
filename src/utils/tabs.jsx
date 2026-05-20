@@ -1,10 +1,10 @@
 export const doctortabs = [
     { label: 'All Doctors', route: '' },
-    { label: 'Applications', route: 'onboard_list' },
+    // { label: 'Applications', route: 'onboard_list' },
     // { label: 'Doctor Profile', route: 'profile' },
     // { label: 'Edit Doctor', route: 'edit' },
-    { label: 'Add Doctor', route: 'add' },
-    { label: 'Fee Parameter', route: 'fee_parameter' },
+    // { label: 'Add Doctor', route: 'add' },
+    // { label: 'Fee Parameter', route: 'fee_parameter' },
     { label: 'Hospital Form', route: 'hospital_form' },
     { label: 'Hospital List', route: 'hospital_list' },
     { label: 'Dr Form', route: 'dr_form' },
