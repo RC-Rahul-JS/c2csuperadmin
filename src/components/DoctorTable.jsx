@@ -1,7 +1,7 @@
 // src/components/DoctorTable.jsx
 import moment from 'moment';
 import { useNavigate } from 'react-router-dom';
-import { BsBank2 } from "react-icons/bs";
+import { FaCoins } from "react-icons/fa";
 const DoctorTable = ({ doctors }) => {
   const navigate=useNavigate()
   console.log(doctors)
@@ -20,7 +20,7 @@ const DoctorTable = ({ doctors }) => {
               {/* <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Social Media</th> */}
               <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Joining Date</th>
               <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Action</th>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Bank Details</th>
+              <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Fees</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
@@ -44,11 +44,11 @@ const DoctorTable = ({ doctors }) => {
                 </td> */}
                 <td className="px-6 py-4 whitespace-nowrap text-gray-600">{moment(doctor.created_at).format("DD/MM/YYYY")}</td>
                 <td className="px-6 py-4 whitespace-nowrap space-x-3">
-                  <button onClick={()=>navigate(doctor._id+'/edit')} className="text-yellow-500 hover:text-yellow-700 transition-colors cursor-pointer">✎</button>
+                  <button onClick={()=>navigate('dr_form/'+doctor._id)} className="text-yellow-500 hover:text-yellow-700 transition-colors cursor-pointer">✎</button>
                   {/* <button className="text-red-500 hover:text-red-700 transition-colors cursor-pointer">✗</button> */}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap space-x-3">
-                  <button onClick={()=>navigate(`/settings/${doctor._id}/bank`)} className="text-#2270C9-500 hover:text-yellow-700 transition-colors cursor-pointer"><BsBank2 /></button>
+                  <button onClick={()=>navigate(`/settings/${doctor._id}/fees`)} className="text-[#2270C9] hover:text-blue-700 transition-colors cursor-pointer"><FaCoins /></button>
                   {/* <button className="text-red-500 hover:text-red-700 transition-colors cursor-pointer">✗</button> */}
                 </td>
               </tr>

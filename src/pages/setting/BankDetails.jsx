@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router';
 import Cookies from 'js-cookie';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+const BASE_API_URL = import.meta.env.VITE_API_URL;
 
 // Helper components for icons
 const EyeOpenIcon = () => (
@@ -35,7 +36,7 @@ export default function BankDetails() {
   useEffect(() => {
     const fetchdata = async () => {
       try {
-    const response = await axios.get(`https://api.care2connect.in/get_doctor/${id}/`);
+    const response = await axios.get(`{BASE_API_URL}/get_doctor/${id}/`);
     console.log(response.data); // yaha doctors ka list milega
     
   } catch (error) {

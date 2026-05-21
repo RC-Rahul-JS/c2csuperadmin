@@ -10,8 +10,8 @@ const Appointment = () => {
   const [appointments, setappointments] = useState([]);
   const [DoctorList, setDoctorList] = useState([])
   const [filterDoctor, setFilterDoctor] = useState("");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+ const [fromDate, setFromDate] = useState(moment().format("YYYY-MM-DD"));
+const [toDate, setToDate] = useState(moment().format("YYYY-MM-DD"));
 
   // Fetch appointments
   useEffect(() => {
@@ -70,11 +70,10 @@ const Appointment = () => {
     return doctorMatch && fromMatch && toMatch;
   });
 
-  const getdoctorname=(id)=>{
-    const doctorarry = DoctorList.filter((item)=>(item._id===id))
-    return doctorarry[0].name
-  }
-
+ const getdoctorname = (id) => {
+  const doctor = DoctorList.find((item) => item._id === id);
+  return doctor ? doctor.name : "Loading...";
+};
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden">
       {/* Filters */}

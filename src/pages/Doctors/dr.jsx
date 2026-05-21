@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import jsonfile from '../../../1.json';
 
 const Form = ({ onSubmitSuccess }) => {
   const navigate = useNavigate();
+  const { id } = useParams();
   const onBack = () => navigate('/dashboard');
   // --- STATE: STEP TRACKING ---
   const [currentStep, setCurrentStep] = useState(1);
@@ -21,7 +22,8 @@ const Form = ({ onSubmitSuccess }) => {
     name: "", email: "", phone: "", secondaryId: "", speciality: "", experience: "",
     address: "", district: "", state: "", password: "", confirmPassword: "",
     phonenumberID: "", whatsAppBusinessAccountID: "", doctorfee: "",
-    appointmentfee: "", otcfee: "", platformfee: "", appointmentdatelimit: "", role: "doctor"
+    appointmentfee: "", otcfee: "", platformfee: "", appointmentdatelimit: "", role: "doctor",
+    seconddoctorfee: "", secondappointmentfee: "", secondplatformfee: "", reappointmentdayslimit: ""
   });
 
   const [bankDetails, setBankDetails] = useState({
@@ -51,8 +53,9 @@ const Form = ({ onSubmitSuccess }) => {
   }, []);
 
   useEffect(() => {
-    console.log("🚀 [Doctor Onboarding] Fetching all hospital requests to build Approved Hospitals list from http://192.168.29.145:5000/c2c_app/hospital/requests...");
-    fetch('http://192.168.29.145:5000/c2c_app/hospital/requests', {
+    const apiBase = import.meta.env.VITE_API_URL || 'http://192.168.29.145:5000';
+    console.log(`🚀 [Doctor Onboarding] Fetching all hospital requests to build Approved Hospitals list from ${apiBase}/c2c_app/hospital/requests...`);
+    fetch(`${apiBase}/c2c_app/hospital/requests`, {
       headers: {
         'ngrok-skip-browser-warning': 'true'
       }
@@ -107,6 +110,92 @@ const Form = ({ onSubmitSuccess }) => {
     }
   }, [onboarding.state, essentials.state]);
 
+  // --- FETCH DOCTOR DETAILS FOR EDITING ---
+  useEffect(() => {
+    if (id) {
+      console.log(`🔍 [Doctor Edit] Fetching details for Doctor ID: ${id}`);
+      fetch(`${import.meta.env.VITE_API_URL || 'http://192.168.29.145:5000'}/get_doctor/${id}/`, {
+        headers: {
+          'ngrok-skip-browser-warning': 'true'
+        }
+      })
+        .then(res => {
+          if (!res.ok) throw new Error("HTTP Status " + res.status);
+          return res.json();
+        })
+        .then(data => {
+          console.log("📥 [Doctor Edit] Doctor data loaded:", data);
+          setOnboarding({
+            fullName: data.name || data.fullName || '',
+            phone: data.phone || '',
+            title: data.title || '',
+            specialization: data.speciality || data.specialization || '',
+            gender: data.gender || '',
+            city: data.city || '',
+            registrationNumber: data.registrationNumber || '',
+            registrationCouncil: data.registrationCouncil || '',
+            registrationYear: data.registrationYear || '',
+            degree: data.degree || '',
+            college: data.college || '',
+            completionYear: data.completionYear || '',
+            experience: data.experience || '',
+            clinicLocation: data.address || data.clinicLocation || '',
+            clinicNumber: data.clinicNumber || '',
+            state: data.state || '',
+            timings: data.timings || '',
+            fees: data.doctorfee || data.fees || '',
+            terms: true,
+            status: data.status || 'Pending',
+            associatedHospital: data.associatedHospital || ''
+          });
+
+          setEssentials({
+            name: data.name || data.fullName || '',
+            email: data.email || '',
+            phone: data.phone || '',
+            secondaryId: data.secondaryId || '',
+            speciality: data.speciality || data.specialization || '',
+            experience: data.experience || '',
+            address: data.address || data.clinicLocation || '',
+            district: data.district || '',
+            state: data.state || '',
+            password: data.password || '',
+            confirmPassword: data.password || '',
+            phonenumberID: data.phonenumberID || '',
+            whatsAppBusinessAccountID: data.whatsAppBusinessAccountID || '',
+            doctorfee: data.doctorfee || data.fees || '',
+            appointmentfee: data.appointmentfee || '',
+            otcfee: data.otcfee || '',
+            platformfee: data.platformfee || '',
+            appointmentdatelimit: data.appointmentdatelimit || '',
+            role: data.role || "doctor",
+            seconddoctorfee: data.seconddoctorfee || '',
+            secondappointmentfee: data.secondappointmentfee || '',
+            secondplatformfee: data.secondplatformfee || data.secondplatfomfee || '',
+            reappointmentdayslimit: data.reappointmentdayslimit || ''
+          });
+
+          setBankDetails({
+            accountHolderName: data.accountHolderName || data.bankDetails?.accountHolderName || '',
+            bankName: data.bankName || data.bankDetails?.bankName || '',
+            accountNumber: data.accountNumber || data.bankDetails?.accountNumber || '',
+            ifscCode: data.ifscCode || data.bankDetails?.ifscCode || '',
+            upiId: data.upiId || data.bankDetails?.upiId || ''
+          });
+
+          setUploadedFiles({
+            idProof: data.idProof ? { preview: data.idProof } : null,
+            registrationDoc: data.registrationDoc ? { preview: data.registrationDoc } : null,
+            hospitalId: data.hospitalId ? { preview: data.hospitalId } : null,
+            photo: data.photo || data.imageUrl ? { preview: data.photo || data.imageUrl } : null
+          });
+        })
+        .catch(err => {
+          console.error("❌ [Doctor Edit] Error loading doctor details:", err);
+        });
+    }
+  }, [id]);
+
   const uploadToS3 = async (imageUri) => {
     const fileName = `${Date.now()}_${Math.floor(Math.random() * 10000)}.jpg`;
     const formData = new FormData();
@@ -143,8 +232,9 @@ const Form = ({ onSubmitSuccess }) => {
     }
 
     try {
+      const apiBase = import.meta.env.VITE_API_URL || 'http://192.168.29.145:5000';
       const res = await fetch(
-        `http://192.168.29.145:5000/duniyape/aws/upload`,
+        `${apiBase}/duniyape/aws/upload`,
         { method: "POST", body: formData }
       );
       const data = await res.json();
@@ -165,9 +255,58 @@ const Form = ({ onSubmitSuccess }) => {
     reader.readAsDataURL(file);
   };
 
+  const handleQuickSaveFees = async () => {
+    try {
+      setIsSubmitting(true);
+      setSubmitStatus("Saving fee settings...");
+      
+      const updatePayload = {
+        doctorfee: essentials.doctorfee || onboarding.fees,
+        appointmentfee: essentials.appointmentfee,
+        platformfee: essentials.platformfee,
+        otcfee: essentials.otcfee,
+        seconddoctorfee: essentials.seconddoctorfee,
+        secondappointmentfee: essentials.secondappointmentfee,
+        secondplatformfee: essentials.secondplatformfee,
+        reappointmentdayslimit: essentials.reappointmentdayslimit
+      };
+
+      console.log(`📤 [Doctor Edit] Quick-saving fees for ID: ${id}`, updatePayload);
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://192.168.29.145:5000'}/update_user/${id}/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": "1234",
+          "ngrok-skip-browser-warning": "true"
+        },
+        body: JSON.stringify(updatePayload)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to save settings. Status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("🎉 [Doctor Edit] Quick-save response:", data);
+      alert("Fee Settings Saved Successfully!");
+    } catch (error) {
+      console.error("Quick-save failed:", error);
+      alert("Failed to save fee settings. Please check console.");
+    } finally {
+      setIsSubmitting(false);
+      setSubmitStatus('');
+    }
+  };
+
   const handleFinalSubmit = async (e) => {
     e.preventDefault();
-    if (essentials.password !== essentials.confirmPassword) return alert("Passwords do not match!");
+    if (essentials.password && essentials.password !== essentials.confirmPassword) {
+      return alert("Passwords do not match!");
+    }
+    if (!id && !essentials.password) {
+      return alert("Please enter password!");
+    }
     if (!onboarding.terms) return alert("Please accept the Terms & Conditions");
 
     try {
@@ -196,8 +335,8 @@ const Form = ({ onSubmitSuccess }) => {
       };
 
       const finalData = { 
-        id: `APP-${Date.now().toString().slice(-4)}`,
-        status: 'Pending',
+        id: id || `APP-${Date.now().toString().slice(-4)}`,
+        status: onboarding.status || 'Pending',
         date: new Date().toISOString().split('T')[0],
         onboarding, 
         essentials, 
@@ -213,14 +352,24 @@ const Form = ({ onSubmitSuccess }) => {
         ...documentsUrls
       };
 
-      console.log("📤 [Doctor Onboarding] POSTing flat payload to http://192.168.29.145:5000/c2c_app/doctor/request:", apiPayload);
+      const apiBase = import.meta.env.VITE_API_URL || 'http://192.168.29.145:5000';
+      const requestUrl = id 
+        ? `${apiBase}/update_user/${id}/`
+        : `${apiBase}/c2c_app/doctor/request`;
 
-      const response = await fetch("http://192.168.29.145:5000/c2c_app/doctor/request", {
+      const headers = {
+        "Content-Type": "application/json",
+        "ngrok-skip-browser-warning": "true"
+      };
+      if (id) {
+        headers["x-api-key"] = "1234";
+      }
+
+      console.log(`📤 [Doctor Onboarding] POSTing flat payload to ${requestUrl}:`, apiPayload);
+
+      const response = await fetch(requestUrl, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true"
-        },
+        headers,
         body: JSON.stringify(apiPayload)
       });
 
@@ -232,6 +381,12 @@ const Form = ({ onSubmitSuccess }) => {
 
       const responseData = await response.json().catch(() => ({ message: "No JSON response" }));
       console.log("🎉 [Doctor Onboarding] Server response data:", responseData);
+
+      if (id) {
+        alert("Doctor Profile Updated Successfully!");
+        navigate('/doctors');
+        return;
+      }
 
       if (onSubmitSuccess) {
         onSubmitSuccess({ ...finalData, documents: uploadedFiles });
@@ -252,7 +407,8 @@ const Form = ({ onSubmitSuccess }) => {
         name: "", email: "", phone: "", secondaryId: "", speciality: "", experience: "",
         address: "", district: "", state: "", password: "", confirmPassword: "",
         phonenumberID: "", whatsAppBusinessAccountID: "", doctorfee: "",
-        appointmentfee: "", otcfee: "", platformfee: "", appointmentdatelimit: "", role: "doctor"
+        appointmentfee: "", otcfee: "", platformfee: "", appointmentdatelimit: "", role: "doctor",
+        seconddoctorfee: "", secondappointmentfee: "", secondplatformfee: "", reappointmentdayslimit: ""
       });
       setBankDetails({
         accountHolderName: '',
@@ -285,7 +441,7 @@ const Form = ({ onSubmitSuccess }) => {
       case 3: return !!(onboarding.clinicLocation && onboarding.clinicNumber && onboarding.timings && onboarding.fees && essentials.appointmentfee && essentials.otcfee && essentials.platformfee);
       case 4: return !!(uploadedFiles.idProof && uploadedFiles.registrationDoc && uploadedFiles.hospitalId && uploadedFiles.photo);
       case 5: return !!(bankDetails.accountHolderName && bankDetails.bankName && bankDetails.accountNumber && bankDetails.ifscCode && bankDetails.upiId);
-      case 6: return !!(essentials.password && essentials.password === essentials.confirmPassword && onboarding.terms);
+      case 6: return !!((id ? (!essentials.password || essentials.password === essentials.confirmPassword) : (essentials.password && essentials.password === essentials.confirmPassword)) && onboarding.terms);
       default: return true;
     }
   };
@@ -376,11 +532,42 @@ const Form = ({ onSubmitSuccess }) => {
                     <SearchableDropdown label="Associated Hospital" required={false} options={approvedHospitals} value={onboarding.associatedHospital || ''} onChange={v => setOnboarding({ ...onboarding, associatedHospital: v })} />
                   </div>
                 </div>
-                <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                  <FeeInput label="Doc Fee" value={onboarding.fees} onChange={v => { setOnboarding({ ...onboarding, fees: v }); setEssentials({ ...essentials, doctorfee: v }); }} />
-                  <FeeInput label="Appt Fee" value={essentials.appointmentfee} onChange={v => setEssentials({ ...essentials, appointmentfee: v })} />
-                  <FeeInput label="OTC Fee" value={essentials.otcfee} onChange={v => setEssentials({ ...essentials, otcfee: v })} />
-                  <FeeInput label="Platform" value={essentials.platformfee} onChange={v => setEssentials({ ...essentials, platformfee: v })} />
+
+                <div className="mt-8">
+                  <h3 className="text-xs font-black text-slate-400 uppercase mb-3 ml-1 tracking-wider">Primary Visit Fees</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <FeeInput label="Doc Fee" value={onboarding.fees} onChange={v => { setOnboarding({ ...onboarding, fees: v }); setEssentials({ ...essentials, doctorfee: v }); }} />
+                    <FeeInput label="Appt Fee" value={essentials.appointmentfee} onChange={v => setEssentials({ ...essentials, appointmentfee: v })} />
+                    <FeeInput label="OTC Fee" value={essentials.otcfee} onChange={v => setEssentials({ ...essentials, otcfee: v })} />
+                    <FeeInput label="Platform" value={essentials.platformfee} onChange={v => setEssentials({ ...essentials, platformfee: v })} />
+                  </div>
+                </div>
+
+                <div className="mt-8 bg-gradient-to-r from-blue-50/50 via-indigo-50/50 to-slate-50/50 border border-blue-100/70 rounded-[2rem] p-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xs font-black text-blue-900 uppercase tracking-wider flex items-center gap-2">
+                      <span className="text-lg">⚙️</span> Advanced Fee & Reappointment Settings
+                    </h3>
+                    {id && (
+                      <button
+                        type="button"
+                        onClick={handleQuickSaveFees}
+                        disabled={isSubmitting}
+                        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black py-2.5 px-5 rounded-xl shadow-md shadow-blue-500/20 text-[10px] tracking-wider uppercase transition-all duration-300 transform active:scale-95 disabled:opacity-50"
+                      >
+                        {isSubmitting ? "Saving..." : "Save Setting"}
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-white/75 backdrop-blur-sm rounded-2xl border border-slate-100">
+                    <FeeInput label="2nd Doc Fee" required={false} value={essentials.seconddoctorfee} onChange={v => setEssentials({ ...essentials, seconddoctorfee: v })} />
+                    <FeeInput label="2nd Appt Fee" required={false} value={essentials.secondappointmentfee} onChange={v => setEssentials({ ...essentials, secondappointmentfee: v })} />
+                    <FeeInput label="2nd Platform" required={false} value={essentials.secondplatformfee} onChange={v => setEssentials({ ...essentials, secondplatformfee: v })} />
+                    <div className="flex flex-col">
+                      <label className="text-[9px] font-black text-blue-900 uppercase mb-1.5 ml-1">Reappt Days Limit</label>
+                      <input type="number" min="0" placeholder="e.g. 15" value={essentials.reappointmentdayslimit} onChange={e => setEssentials({ ...essentials, reappointmentdayslimit: e.target.value })} className="w-full bg-white border border-slate-200 p-3 rounded-xl text-sm font-black text-blue-600 outline-none" />
+                    </div>
+                  </div>
                 </div>
               </StepWrapper>
             )}
@@ -514,6 +701,10 @@ const Form = ({ onSubmitSuccess }) => {
                       <p><span className="font-bold">Appt Fee:</span> ₹{essentials.appointmentfee || '-'}</p>
                       <p><span className="font-bold">OTC Fee:</span> ₹{essentials.otcfee || '-'}</p>
                       <p><span className="font-bold">Platform Fee:</span> ₹{essentials.platformfee || '-'}</p>
+                      <p><span className="font-bold">2nd Doc Fee:</span> ₹{essentials.seconddoctorfee || '-'}</p>
+                      <p><span className="font-bold">2nd Appt Fee:</span> ₹{essentials.secondappointmentfee || '-'}</p>
+                      <p><span className="font-bold">2nd Platform:</span> ₹{essentials.secondplatformfee || '-'}</p>
+                      <p><span className="font-bold">Reappt Limit:</span> {essentials.reappointmentdayslimit ? `${essentials.reappointmentdayslimit} Days` : '-'}</p>
                     </div>
                   </div>
                   <div>

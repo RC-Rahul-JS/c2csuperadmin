@@ -19,23 +19,32 @@ useEffect(() => {
   (async () => {
     try {
       showLoader();
-      const res = await axios.get('http://192.168.29.145:5000/doctor_list');
+      const res = await axios.get(`${API_BASE_URL || 'http://192.168.29.145:5000'}/doctor_list`);
       const response = res.data;
 
       console.log(response)
 
-      // initially, just show doctors with placeholder
-      const base_list = response.map(doc => ({
-        ...doc,
-        profile_pic: 'https://via.placeholder.com/150'
-      }));
+      // initially, just show doctors with placeholder or direct URL if present
+      const base_list = response.map(doc => {
+        let pic = 'https://via.placeholder.com/150';
+        if (doc.photo && typeof doc.photo === 'string' && (doc.photo.startsWith('http://') || doc.photo.startsWith('https://'))) {
+          pic = doc.photo;
+        } else if (doc.imageUrl && typeof doc.imageUrl === 'string' && (doc.imageUrl.startsWith('http://') || doc.imageUrl.startsWith('https://'))) {
+          pic = doc.imageUrl;
+        }
+        return {
+          ...doc,
+          profile_pic: pic
+        };
+      });
 
       setlist(base_list);
 
-      // now fetch images one by one in background
+      // now fetch images one by one in background if they are IDs
       response.forEach(async (doc, index) => {
-        if (doc?.photo) {
-          const url = await imageUrl(doc.documents.photo);
+        const photoId = doc.photo || (doc.documents && doc.documents.photo) || doc.imageUrl;
+        if (photoId && typeof photoId === 'string' && !photoId.startsWith('http')) {
+          const url = await imageUrl(photoId);
           if (url) {
             setlist(prev =>
               prev.map((d, i) => i === index ? { ...d, profile_pic: url } : d)

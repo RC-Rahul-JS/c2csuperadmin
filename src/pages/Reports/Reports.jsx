@@ -24,6 +24,7 @@ import { saveAs } from "file-saver";
 //   { id: 5, seriesNo: "TXN-005", txnId: "pay_Mn1b6v5cx", date: "2024-10-12", amount: 220 },
 //   { id: 6, seriesNo: "TXN-006", txnId: "pay_Xy8b2n9kl", date: "2024-11-01", amount: 220 },
 // ];
+const BASE_API_URL = import.meta.env.VITE_API_URL;
 
 const FinancialDashboard = () => {
   // State for Inputs
@@ -39,7 +40,7 @@ const FinancialDashboard = () => {
 
   async function getC2CReport() {
   try {
-    const response = await axios.get("https://api.care2connect.in/get_c2c_report", {
+    const response = await axios.get(`${BASE_API_URL}/get_c2c_report`, {
       params: {
         from: moment(fromDate).format('YYYY-MM-DD'),
         to: moment(toDate).format('YYYY-MM-DD')

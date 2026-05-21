@@ -23,7 +23,7 @@ const Fees = () => {
   useEffect(() => {
     const fetchdata = async () => {
       try {
-        const response = await axios.get(`https://api.care2connect.in/get_doctor/${id}/`);
+        const response = await axios.get(`{API_BASE_UR}/get_doctor/${id}/`);
         console.log(response.data);
         setDoctorfee(response.data.doctorfee || '');
         setAppointmentfee(response.data.appointmentfee || '');
@@ -106,7 +106,7 @@ const Fees = () => {
           <div className="flex items-center justify-between mb-3">
             <label className="text-black text-sm font-medium">Doctor Fee</label>
             <input
-              type="number"
+              type="text"
               value={doctorfee}
               onChange={(e) => setDoctorfee(e.target.value)}
               className="paramertinput w-32 px-3 py-1.5 border border-gray-400 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -118,7 +118,7 @@ const Fees = () => {
           <div className="flex items-center justify-between mb-3">
             <label className="text-black text-sm font-medium">Appointment Fee</label>
             <input
-              type="number"
+              type="text"
               value={appointmentfee}
               onChange={(e) => setAppointmentfee(e.target.value)}
               className="paramertinput w-32 px-3 py-1.5 border border-gray-400 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -130,7 +130,7 @@ const Fees = () => {
           <div className="flex items-center justify-between mb-3">
             <label className="text-black text-sm font-medium">Platform Fee</label>
             <input
-              type="number"
+              type="text"
               value={platformfee}
               onChange={(e) => setPlatformfee(e.target.value)}
               className="paramertinput w-32 px-3 py-1.5 border border-gray-400 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -147,7 +147,7 @@ const Fees = () => {
           <div className="flex items-center justify-between mb-3">
             <label className="text-black text-sm font-medium">2nd Doctor Fee</label>
             <input
-              type="number"
+              type="text"
               value={seconddoctorfee}
               onChange={(e) => setSeconddoctorfee(e.target.value)}
               className="paramertinput w-32 px-3 py-1.5 border border-gray-400 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -159,7 +159,7 @@ const Fees = () => {
           <div className="flex items-center justify-between mb-3">
             <label className="text-black text-sm font-medium">2nd Appointment Fee</label>
             <input
-              type="number"
+              type="text"
               value={secondappointmentfee}
               onChange={(e) => setSecondappointmentfee(e.target.value)}
               className="paramertinput w-32 px-3 py-1.5 border border-gray-400 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -171,7 +171,7 @@ const Fees = () => {
           <div className="flex items-center justify-between mb-3">
             <label className="text-black text-sm font-medium">2nd Platform Fee</label>
             <input
-              type="number"
+              type="text"
               value={secondplatfomfee}
               onChange={(e) => setSecondplatfomfee(e.target.value)}
               className="paramertinput w-32 px-3 py-1.5 border border-gray-400 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -188,7 +188,7 @@ const Fees = () => {
           <div className="flex items-center justify-between mb-3">
             <label className="text-black text-sm font-medium">Reappointment Days Limit</label>
             <input
-              type="number"
+              type="text"
               value={reappointmentdayslimit}
               onChange={(e) => setReappointmentdayslimit(e.target.value)}
               className="paramertinput w-32 px-3 py-1.5 border border-gray-400 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"

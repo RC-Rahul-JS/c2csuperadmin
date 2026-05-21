@@ -64,15 +64,15 @@ const Sidebar = () => {
   // Define nav items with icons and paths
   const navItems = [
     { name: 'Appointments', path: '/appointments', icon: HiCalendar },
-    { name: 'Hospitals', path: '/hospitals', icon: HiOfficeBuilding },
+    // { name: 'Hospitals', path: '/hospitals', icon: HiOfficeBuilding },
     { name: 'Doctors', path: '/doctors', icon: HiUserGroup },
-    { name: 'Staff', path: '/staff', icon: HiUserGroup },
+    // { name: 'Staff', path: '/staff', icon: HiUserGroup },
     { name: 'Users', path: '/users', icon: HiUsers },
     { name: 'Medicine Orders', path: '/medicine-orders', icon: HiClipboardList },
     { name: 'Payments', path: '/payments', icon: HiCreditCard },
     { name: 'Accounting', path: '/accounting', icon: MdAccountTree  },
     { name: 'Reports', path: '/reports', icon: HiChartBar },
-    { name: 'Settings', path: '/settings', icon: HiCog },
+    // { name: 'Settings', path: '/settings', icon: HiCog },
     //  { name: "Designation", path: "/designation", icon: HiBriefcase },
   // { name: "Employee Creation", path: "/empcreation", icon: HiUserAdd },
   ];

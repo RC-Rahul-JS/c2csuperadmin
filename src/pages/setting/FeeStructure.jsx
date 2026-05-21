@@ -12,7 +12,7 @@ export default function FeeStructure() {
     (async () => {
       try {
         showLoader();
-        const res = await axios.get("https://api.care2connect.in/doctor_list");
+        const res = await axios.get(`${API_BASE_URL}/doctor_list`);
         const response = res.data;
 
         const base_list = response.map((doc) => ({

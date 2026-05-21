@@ -65,6 +65,7 @@ function App() {
                 <Route path="onboard_list/:id" element={<ApplicationReview />} />
                 <Route path="fee_parameter" element={<FeeStructure />} />
                 <Route path="dr_form" element={<DoctorForm />} />
+                <Route path="dr_form/:id" element={<DoctorForm />} />
                 <Route path="dr_list" element={<DoctorList />} />
                 <Route path="hospital_form" element={<HospitalForm />} />
                 <Route path="hospital_list" element={<HospitalList />} />
