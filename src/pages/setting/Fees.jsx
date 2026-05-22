@@ -23,7 +23,7 @@ const Fees = () => {
   useEffect(() => {
     const fetchdata = async () => {
       try {
-        const response = await axios.get(`{API_BASE_UR}/get_doctor/${id}/`);
+        const response = await axios.get(`${API_BASE_URL}/get_doctor/${id}/`);
         console.log(response.data);
         setDoctorfee(response.data.doctorfee || '');
         setAppointmentfee(response.data.appointmentfee || '');
