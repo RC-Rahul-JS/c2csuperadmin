@@ -14,6 +14,11 @@ export default defineConfig({
         target: 'http://192.168.29.145:5000',
         changeOrigin: true,
         secure: false,
+      },
+      '/demo_doctor': {
+        target: 'http://192.168.29.145:5000',
+        changeOrigin: true,
+        secure: false,
       }
     }
   },

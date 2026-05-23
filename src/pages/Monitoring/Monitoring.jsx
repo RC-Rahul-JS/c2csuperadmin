@@ -119,14 +119,10 @@ const createMockLog = (index, total) => {
 };
 
 export default function Monitoring() {
-  const [logs, setLogs] = useState(() => {
-    const initialLogs = [];
-    const totalLogsToGenerate = MAX_BUFFER_SIZE;
-    for (let i = 0; i < totalLogsToGenerate; i++) {
-      initialLogs.push(createMockLog(i, totalLogsToGenerate));
-    }
-    return initialLogs;
-  });
+  const [logs, setLogs] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [autoRefresh, setAutoRefresh] = useState(false);
 
   const [filterLevel, setFilterLevel] = useState('ALL');
   const [filterService, setFilterService] = useState('ALL');
@@ -137,8 +133,116 @@ export default function Monitoring() {
   const [isRegex, setIsRegex] = useState(false);
   const [selectedLogId, setSelectedLogId] = useState(null);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [drawerSearch, setDrawerSearch] = useState('');
+
+  // Reset drawer search when switching between logs
+  useEffect(() => {
+    setDrawerSearch('');
+  }, [selectedLogId]);
 
   const logsEndRef = useRef(null);
+
+  const fetchLogs = async () => {
+    try {
+      const response = await fetch('/demo_doctor/logs');
+      if (!response.ok) {
+        throw new Error(`HTTP Error! Status: ${response.status}`);
+      }
+      const json = await response.json();
+      if (json.success && Array.isArray(json.data)) {
+        const mappedLogs = json.data.map((item, index) => {
+          let msgText = '';
+          if (item.message) {
+            if (typeof item.message === 'string') {
+              msgText = item.message;
+            } else if (item.message.text && item.message.text.body) {
+              msgText = item.message.text.body;
+            } else if (item.message.body) {
+              msgText = item.message.body;
+            } else {
+              msgText = JSON.stringify(item.message);
+            }
+          } else {
+            msgText = 'No message content';
+          }
+
+          let level = 'INFO';
+          if (item.event_type) {
+            if (item.event_type.toLowerCase().includes('error') || item.event_type.toLowerCase().includes('fail')) {
+              level = 'ERROR';
+            } else if (item.event_type.toLowerCase().includes('warn')) {
+              level = 'WARN';
+            } else if (item.event_type.toLowerCase().includes('debug')) {
+              level = 'DEBUG';
+            } else {
+              level = item.event_type.toUpperCase();
+            }
+          }
+
+          const fromNumber = item.message?.from || '';
+          const displayMessage = fromNumber ? `[${fromNumber}] ${msgText}` : msgText;
+
+          return {
+            id: item._id || `log-${index}-${Math.random().toString(36).substring(2, 7)}`,
+            timestamp: item.createdAt ? new Date(item.createdAt).toISOString() : new Date().toISOString(),
+            level: level,
+            service: item.event_type || 'whatsapp-api',
+            message: displayMessage,
+            traceId: item.message?.id || item._id || 'N/A',
+            metadata: {
+              clientIp: item.message?.from_user_id || 'N/A',
+              executionMs: item.message?.timestamp ? parseInt(item.message.timestamp) % 1000 : 0,
+              host: "demo-doctor-server",
+              env: 'production',
+              threadId: fromNumber || 'N/A',
+              raw: item
+            }
+          };
+        });
+
+        mappedLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        setLogs(mappedLogs);
+        setError(null);
+      } else {
+        throw new Error('Invalid API response format or missing data');
+      }
+    } catch (err) {
+      console.error('Failed to fetch logs:', err);
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLogs();
+  }, []);
+
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const interval = setInterval(fetchLogs, 5000);
+    return () => clearInterval(interval);
+  }, [autoRefresh]);
+
+  const uniqueServices = useMemo(() => {
+    const servicesSet = new Set(logs.map(log => log.service));
+    return Array.from(servicesSet);
+  }, [logs]);
+
+  const uniqueLevels = useMemo(() => {
+    const levelsSet = new Set(logs.map(log => log.level));
+    return Array.from(levelsSet);
+  }, [logs]);
+
+  const uniqueDates = useMemo(() => {
+    const datesSet = new Set(
+      logs.map(log => {
+        const d = new Date(log.timestamp);
+        return d.toISOString().split('T')[0];
+      })
+    );
+    return Array.from(datesSet).sort().reverse();
+  }, [logs]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -156,6 +260,7 @@ export default function Monitoring() {
     let text = searchQuery.trim();
     let serviceOverride = null;
     let levelOverride = null;
+    let phoneOverride = null;
 
     if (text.toLowerCase().includes('service:')) {
       const match = text.match(/service:([a-zA-Z0-9_-]+)/i);
@@ -171,8 +276,22 @@ export default function Monitoring() {
         text = text.replace(match[0], '').trim();
       }
     }
+    if (text.toLowerCase().includes('from:')) {
+      const match = text.match(/from:([a-zA-Z0-9+-]+)/i);
+      if (match) {
+        phoneOverride = match[1].toLowerCase();
+        text = text.replace(match[0], '').trim();
+      }
+    }
+    if (text.toLowerCase().includes('phone:')) {
+      const match = text.match(/phone:([a-zA-Z0-9+-]+)/i);
+      if (match) {
+        phoneOverride = match[1].toLowerCase();
+        text = text.replace(match[0], '').trim();
+      }
+    }
 
-    return { text, service: serviceOverride, level: levelOverride };
+    return { text, service: serviceOverride, level: levelOverride, phone: phoneOverride };
   }, [searchQuery]);
 
   const filteredLogs = useMemo(() => {
@@ -186,22 +305,17 @@ export default function Monitoring() {
       // 2. Service Dropdown Filter
       if (filterService !== 'ALL' && log.service !== filterService) return false;
       
-      // 3. Command shortcuts inline overrides (level: or service:)
+      // 3. Command shortcuts inline overrides (level:, service:, phone:)
       if (parsedSearch.service && !log.service.toLowerCase().includes(parsedSearch.service)) return false;
       if (parsedSearch.level && log.level !== parsedSearch.level) return false;
+      if (parsedSearch.phone && !(log.metadata?.threadId && log.metadata.threadId.toLowerCase().includes(parsedSearch.phone))) return false;
 
-      // 4. Time Window / Date Filtering
-      const logTime = new Date(log.timestamp);
-      if (timeWindow === '1M') {
-        const cutoff = new Date(now.getTime() - 60 * 1000);
-        if (logTime < cutoff) return false;
-      } else if (timeWindow === '5M') {
-        const cutoff = new Date(now.getTime() - 5 * 60 * 1000);
-        if (logTime < cutoff) return false;
-      } else if (timeWindow === '15M') {
-        const cutoff = new Date(now.getTime() - 15 * 60 * 1000);
-        if (logTime < cutoff) return false;
+      // 4. Date / Time Window Filtering
+      if (timeWindow !== 'ALL' && timeWindow !== 'CUSTOM') {
+        const logTimeStr = new Date(log.timestamp).toISOString().split('T')[0];
+        if (logTimeStr !== timeWindow) return false;
       } else if (timeWindow === 'CUSTOM') {
+        const logTime = new Date(log.timestamp);
         if (customStartDate) {
           const start = new Date(customStartDate);
           if (logTime < start) return false;
@@ -212,15 +326,20 @@ export default function Monitoring() {
         }
       }
 
-      // 5. Search Text Filter
+      // 5. Search Text Filter (Deep Global JSON Search)
       if (parsedSearch.text) {
+        const rawJSONStr = log.metadata?.raw ? JSON.stringify(log.metadata.raw) : '';
         if (regex) {
-          return regex.test(log.message) || regex.test(log.service) || regex.test(log.traceId);
+          return regex.test(log.message) || 
+                 regex.test(log.service) || 
+                 regex.test(log.traceId) ||
+                 (rawJSONStr && regex.test(rawJSONStr));
         } else {
           const lowerText = parsedSearch.text.toLowerCase();
           return log.message.toLowerCase().includes(lowerText) ||
                  log.service.toLowerCase().includes(lowerText) ||
-                 log.traceId.toLowerCase().includes(lowerText);
+                 log.traceId.toLowerCase().includes(lowerText) ||
+                 (rawJSONStr && rawJSONStr.toLowerCase().includes(lowerText));
         }
       }
       return true;
@@ -378,7 +497,7 @@ export default function Monitoring() {
   return (
     <div className="h-screen w-full flex flex-col bg-slate-950 text-slate-400 font-sans overflow-hidden antialiased selection:bg-indigo-500/20 selection:text-indigo-200">
       
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         
         {/* Navigation Navbar */}
         <header className="h-14 border-b border-slate-900/60 px-6 flex items-center justify-between bg-slate-950 shrink-0">
@@ -392,7 +511,8 @@ export default function Monitoring() {
 
             <div className="hidden sm:flex items-center gap-2.5 text-[11px] text-slate-500 tracking-wide">
               <span className="flex items-center gap-1.5 font-mono text-[10px]">
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span> STATIC DIAGNOSTIC ARCHIVE
+                <span className={"w-1.5 h-1.5 rounded-full " + (autoRefresh ? "bg-emerald-500 animate-pulse" : "bg-slate-500")}></span> 
+                {autoRefresh ? "LIVE LOG STREAM" : "PAUSED LOG STREAM"}
               </span>
               <span>•</span>
               <span>{logs.length} entries loaded</span>
@@ -400,6 +520,14 @@ export default function Monitoring() {
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
+            <button 
+              onClick={() => setAutoRefresh(!autoRefresh)}
+              className={"flex items-center gap-1.5 py-1 px-2.5 rounded text-[11px] transition border font-mono " + (autoRefresh ? "bg-emerald-950/40 border-emerald-900/60 text-emerald-400 hover:bg-emerald-950/60" : "bg-slate-900 border-slate-850 text-slate-500 hover:text-slate-400")}
+            >
+              <span className={"w-1.5 h-1.5 rounded-full " + (autoRefresh ? "bg-emerald-400 animate-ping" : "bg-slate-600")}></span>
+              {autoRefresh ? "Live Feed" : "Paused"}
+            </button>
+
             <button 
               onClick={exportLogsAsJSON}
               className="flex items-center gap-1 bg-slate-900/80 hover:bg-slate-800 text-slate-300 py-1 px-2.5 rounded text-[11px] transition border border-slate-800"
@@ -466,11 +594,9 @@ export default function Monitoring() {
                 className="bg-slate-900 text-slate-400 border border-slate-850 rounded px-2 py-1.5 text-xs focus:outline-none cursor-pointer"
               >
                 <option value="ALL">All Levels</option>
-                <option value="DEBUG">DEBUG</option>
-                <option value="INFO">INFO</option>
-                <option value="WARN">WARN</option>
-                <option value="ERROR">ERROR</option>
-                <option value="FATAL">FATAL</option>
+                {uniqueLevels.map(lvl => (
+                  <option key={lvl} value={lvl}>{lvl}</option>
+                ))}
               </select>
 
               <select 
@@ -479,7 +605,7 @@ export default function Monitoring() {
                 className="bg-slate-900 text-slate-400 border border-slate-850 rounded px-2 py-1.5 text-xs focus:outline-none cursor-pointer"
               >
                 <option value="ALL">All Services</option>
-                {SERVICES.map(svc => (
+                {uniqueServices.map(svc => (
                   <option key={svc} value={svc}>{svc}</option>
                 ))}
               </select>
@@ -490,10 +616,19 @@ export default function Monitoring() {
                 onChange={(e) => setTimeWindow(e.target.value)}
                 className="bg-slate-900 text-slate-400 border border-slate-850 rounded px-2 py-1.5 text-xs focus:outline-none cursor-pointer"
               >
-                <option value="ALL">All Time</option>
-                <option value="1M">Last Minute</option>
-                <option value="5M">Last 5 Minutes</option>
-                <option value="15M">Last 15 Minutes</option>
+                <option value="ALL">All Dates</option>
+                {uniqueDates.map(dateStr => {
+                  const formatted = new Date(dateStr).toLocaleDateString(undefined, {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                  });
+                  return (
+                    <option key={dateStr} value={dateStr}>
+                      {formatted}
+                    </option>
+                  );
+                })}
                 <option value="CUSTOM">Custom Range</option>
               </select>
 
@@ -540,9 +675,9 @@ export default function Monitoring() {
           {/* Quick Suggestions Row */}
           <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500 overflow-x-auto whitespace-nowrap pt-0.5 pb-0.5">
             <span className="shrink-0 font-mono text-slate-600">SUGGESTIONS:</span>
-            <button onClick={() => applySuggestion('status:500')} className="bg-slate-900/40 hover:bg-slate-900 hover:text-slate-300 px-1.5 py-0.5 rounded border border-slate-900/40 transition font-mono text-slate-500">status:500</button>
-            <button onClick={() => applySuggestion('level:error')} className="bg-slate-900/40 hover:bg-slate-900 hover:text-slate-300 px-1.5 py-0.5 rounded border border-slate-900/40 transition font-mono text-slate-500">level:error</button>
-            <button onClick={() => applySuggestion('service:api-gateway')} className="bg-slate-900/40 hover:bg-slate-900 hover:text-slate-300 px-1.5 py-0.5 rounded border border-slate-900/40 transition font-mono text-slate-500">service:api-gateway</button>
+            <button onClick={() => applySuggestion('incoming_message')} className="bg-slate-900/40 hover:bg-slate-900 hover:text-slate-300 px-1.5 py-0.5 rounded border border-slate-900/40 transition font-mono text-slate-500">incoming_message</button>
+            <button onClick={() => applySuggestion('wamid.')} className="bg-slate-900/40 hover:bg-slate-900 hover:text-slate-300 px-1.5 py-0.5 rounded border border-slate-900/40 transition font-mono text-slate-500">wamid.</button>
+            <button onClick={() => applySuggestion('919131037870')} className="bg-slate-900/40 hover:bg-slate-900 hover:text-slate-300 px-1.5 py-0.5 rounded border border-slate-900/40 transition font-mono text-slate-500">919131037870</button>
           </div>
         </section>
 
@@ -552,162 +687,239 @@ export default function Monitoring() {
           {/* Header Row */}
           <div className="sticky top-0 bg-slate-950 border-b border-slate-900 px-4 py-2 text-slate-600 flex items-center font-semibold text-[10px] tracking-wide select-none z-10">
             <span className="w-4 shrink-0"></span>
-            <span className="w-20 shrink-0">Timestamp</span>
-            <span className="w-16 shrink-0 text-center">Level</span>
-            <span className="w-24 shrink-0 px-2">Service</span>
-            <span className="flex-1">Message</span>
-            <span className="hidden lg:block w-20 shrink-0 text-right">Trace</span>
+            <span className="w-28 shrink-0">Timestamp</span>
+            <span className="w-36 shrink-0 px-2">Level</span>
+            <span className="w-36 shrink-0 px-2">Service</span>
+            <span className="flex-1 px-2">Message</span>
+            <span className="hidden lg:block w-28 shrink-0 text-right">Trace</span>
           </div>
 
           {/* Log Stream Body List */}
-          <div className="divide-y divide-slate-900/40">
-            {filteredLogs.map(log => {
-              const isSelected = log.id === selectedLogId;
-              
-              let levelLabelColor = 'text-slate-500';
-              let indicatorColor = 'bg-slate-700';
-              
-              if (log.level === 'DEBUG') {
-                levelLabelColor = 'text-purple-400';
-                indicatorColor = 'bg-purple-500/70';
-              }
-              if (log.level === 'INFO') {
-                levelLabelColor = 'text-blue-400';
-                indicatorColor = 'bg-blue-500/70';
-              }
-              if (log.level === 'WARN') {
-                levelLabelColor = 'text-amber-400';
-                indicatorColor = 'bg-amber-500/70';
-              }
-              if (log.level === 'ERROR') {
-                levelLabelColor = 'text-rose-400';
-                indicatorColor = 'bg-rose-500/70';
-              }
-              if (log.level === 'FATAL') {
-                levelLabelColor = 'text-red-500';
-                indicatorColor = 'bg-red-500';
-              }
-
-              const logDate = new Date(log.timestamp);
-              const timeStr = logDate.toLocaleTimeString() + '.' + String(logDate.getMilliseconds()).padStart(3, '0');
-
-              return (
-                <div 
-                  key={log.id}
-                  onClick={() => setSelectedLogId(isSelected ? null : log.id)}
-                  className={"group px-4 py-1.5 flex items-center gap-1 cursor-pointer transition-colors duration-150 " + (isSelected ? "bg-slate-900/30 border-l border-indigo-500" : "hover:bg-slate-900/10")}
-                >
-                  <span className="w-4 shrink-0 text-slate-700 flex justify-center items-center">
-                    <svg className={"w-2.5 h-2.5 transform transition-transform " + (isSelected ? "rotate-90 text-indigo-400" : "text-slate-700 group-hover:text-slate-500")} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </span>
-                  <span className="w-20 shrink-0 text-slate-500 font-mono tracking-tighter truncate text-[10px]" title={log.timestamp}>
-                    {timeStr}
-                  </span>
-                  <span className="w-16 shrink-0 flex items-center justify-start gap-1.5 px-1">
-                    <span className={"w-1 h-1 rounded-full " + indicatorColor}></span>
-                    <span className={"text-[9px] font-semibold tracking-wide " + levelLabelColor}>
-                      {log.level}
-                    </span>
-                  </span>
-                  <span className="w-24 shrink-0 px-2 text-slate-400 tracking-tight truncate text-[10px]">
-                    {log.service}
-                  </span>
-                  <span className="flex-1 text-slate-300 font-mono truncate select-all">
-                    {highlightText(log.message, parsedSearch.text)}
-                  </span>
-                  <span className="hidden lg:block w-20 shrink-0 text-right text-slate-600 group-hover:text-indigo-400 transition-colors font-mono tracking-tighter truncate text-[10px]">
-                    {log.traceId}
-                  </span>
+          <div className="divide-y divide-slate-900/40 relative min-h-full flex flex-col">
+            {isLoading && logs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-24 space-y-4">
+                <div className="w-7 h-7 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-xs text-slate-500 font-mono animate-pulse">Streaming live database logs from demo_doctor server...</p>
+              </div>
+            ) : error ? (
+              <div className="flex flex-col items-center justify-center py-20 space-y-4 px-6 text-center">
+                <div className="text-rose-500 text-sm font-semibold flex items-center gap-1.5">
+                  <span className="inline-block w-2 h-2 rounded-full bg-rose-550 animate-ping"></span>
+                  Connection Failure
                 </div>
-              );
-            })}
+                <p className="text-[11px] text-rose-455/80 font-mono max-w-md break-all leading-normal bg-rose-950/10 border border-rose-950/20 p-3 rounded">
+                  {error}
+                </p>
+                <button 
+                  onClick={fetchLogs}
+                  className="bg-slate-900 hover:bg-slate-800 text-slate-300 font-medium py-1 px-4 rounded text-xs transition border border-slate-800"
+                >
+                  Retry Connection
+                </button>
+              </div>
+            ) : filteredLogs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-24 text-center px-4">
+                <h3 className="text-xs font-semibold text-slate-400">No events match criteria</h3>
+                <p className="text-[11px] text-slate-600 mt-1 max-w-xs leading-normal">
+                  Reset filters or redefine search thresholds to locate diagnostic logs.
+                </p>
+                <button 
+                  onClick={resetAllFilters}
+                  className="mt-4 bg-slate-900 hover:bg-slate-800 text-slate-300 font-medium py-1 px-4 rounded text-xs transition border border-slate-800"
+                >
+                  Reset Filters
+                </button>
+              </div>
+            ) : (
+              filteredLogs.map(log => {
+                const isSelected = log.id === selectedLogId;
+                
+                let levelLabelColor = 'text-slate-500';
+                let indicatorColor = 'bg-slate-700';
+                
+                if (log.level.includes('ERROR') || log.level.includes('FAIL')) {
+                  levelLabelColor = 'text-rose-400';
+                  indicatorColor = 'bg-rose-500/70';
+                } else if (log.level.includes('WARN')) {
+                  levelLabelColor = 'text-amber-400';
+                  indicatorColor = 'bg-amber-500/70';
+                } else if (log.level.includes('DEBUG')) {
+                  levelLabelColor = 'text-purple-400';
+                  indicatorColor = 'bg-purple-500/70';
+                } else if (log.level.includes('INCOMING')) {
+                  levelLabelColor = 'text-emerald-400';
+                  indicatorColor = 'bg-emerald-500/70';
+                } else if (log.level.includes('OUTGOING')) {
+                  levelLabelColor = 'text-sky-400';
+                  indicatorColor = 'bg-sky-500/70';
+                } else if (log.level === 'INFO') {
+                  levelLabelColor = 'text-blue-400';
+                  indicatorColor = 'bg-blue-500/70';
+                } else {
+                  levelLabelColor = 'text-indigo-400';
+                  indicatorColor = 'bg-indigo-500/70';
+                }
+
+                const logDate = new Date(log.timestamp);
+                const timeStr = logDate.toLocaleTimeString() + '.' + String(logDate.getMilliseconds()).padStart(3, '0');
+
+                return (
+                  <div 
+                    key={log.id}
+                    onClick={() => setSelectedLogId(isSelected ? null : log.id)}
+                    className={"group px-4 py-1.5 flex items-center gap-1 cursor-pointer transition-colors duration-150 " + (isSelected ? "bg-slate-900/30 border-l border-indigo-500" : "hover:bg-slate-900/10")}
+                  >
+                    <span className="w-4 shrink-0 text-slate-700 flex justify-center items-center">
+                      <svg className={"w-2.5 h-2.5 transform transition-transform " + (isSelected ? "rotate-90 text-indigo-400" : "text-slate-700 group-hover:text-slate-500")} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </span>
+                    <span className="w-28 shrink-0 text-slate-500 font-mono tracking-tighter truncate text-[10px]" title={log.timestamp}>
+                      {timeStr}
+                    </span>
+                    <span className="w-36 shrink-0 flex items-center justify-start gap-1.5 px-2 truncate">
+                      <span className={"w-1 h-1 rounded-full shrink-0 " + indicatorColor}></span>
+                      <span className={"text-[9px] font-semibold tracking-wide truncate " + levelLabelColor} title={log.level}>
+                        {log.level}
+                      </span>
+                    </span>
+                    <span className="w-36 shrink-0 px-2 text-slate-400 tracking-tight truncate text-[10px]" title={log.service}>
+                      {log.service}
+                    </span>
+                    <span className="flex-1 text-slate-300 font-mono truncate px-2 select-all" title={log.message}>
+                      {highlightText(log.message, parsedSearch.text)}
+                    </span>
+                    <span className="hidden lg:block w-28 shrink-0 text-right text-slate-600 group-hover:text-indigo-400 transition-colors font-mono tracking-tighter truncate text-[10px]" title={log.traceId}>
+                      {log.traceId}
+                    </span>
+                  </div>
+                );
+              })
+            )}
             
             <div ref={logsEndRef} />
           </div>
-
-          {/* Empty State Panel */}
-          {filteredLogs.length === 0 && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center bg-slate-950/80">
-              <h3 className="text-sm font-semibold text-slate-400">No events match criteria</h3>
-              <p className="text-xs text-slate-600 mt-1 max-w-sm">Reset filters or redefine date-time thresholds to locate diagnostic logs.</p>
-              <button 
-                onClick={resetAllFilters}
-                className="mt-4 bg-slate-900 hover:bg-slate-800 text-slate-300 font-medium py-1 px-4 rounded text-xs transition border border-slate-800"
-              >
-                Reset Filters
-              </button>
-            </div>
-          )}
         </section>
 
         {/* Detailed Inspection Drawer */}
-        {activeInspectorLog && (
-          <div className="border-t border-slate-900 bg-slate-950 flex flex-col h-72 shrink-0 transition-all duration-200 overflow-hidden">
-            <div className="h-10 border-b border-slate-900 px-4 flex items-center justify-between bg-slate-950">
-              <div className="flex items-center gap-2 overflow-hidden">
-                <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 shrink-0">
-                  Trace Details
-                </span>
-                <span className="text-[9px] px-1.5 py-0.2 border border-slate-900 rounded font-bold font-mono text-indigo-400">
-                  {activeInspectorLog.level}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={copyRawLogJSON}
-                  className="flex items-center gap-1 bg-slate-900 hover:bg-slate-800 text-slate-300 px-2.5 py-1 rounded text-xs transition border border-slate-800"
-                >
-                  {copySuccess ? "Copied" : "Copy Payload"}
-                </button>
-                <button 
-                  onClick={() => setSelectedLogId(null)}
-                  className="text-slate-500 hover:text-slate-300 transition p-1 hover:bg-slate-900 rounded"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
+        {activeInspectorLog && (() => {
+          const rawItem = activeInspectorLog.metadata?.raw || {};
+          const props = [
+            { key: 'Log ID', val: activeInspectorLog.id },
+            { key: 'Created At', val: rawItem.createdAt || activeInspectorLog.timestamp },
+            { key: 'Event Type', val: rawItem.event_type || activeInspectorLog.service },
+            { key: 'Sender Phone', val: rawItem.message?.from || 'N/A' },
+            { key: 'Sender User ID', val: rawItem.message?.from_user_id || 'N/A' },
+            { key: 'Message ID', val: rawItem.message?.id || 'N/A' },
+            { key: 'Message Type', val: rawItem.message?.type || 'N/A' },
+            { key: 'Message Body', val: rawItem.message?.text?.body || rawItem.message?.body || 'N/A' }
+          ];
 
-            <div className="flex-1 p-4 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Visual Metadata Properties */}
-              <div className="space-y-2">
-                <h4 className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Properties</h4>
-                <div className="bg-slate-900/20 rounded p-3 border border-slate-900 space-y-2 text-xs font-mono text-slate-400">
-                  <div className="grid grid-cols-3 gap-2 py-0.5 border-b border-slate-950">
-                    <span className="text-slate-600">Timestamp</span>
-                    <span className="col-span-2 text-slate-300 truncate">{activeInspectorLog.timestamp}</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 py-0.5 border-b border-slate-950">
-                    <span className="text-slate-600">Service</span>
-                    <span className="col-span-2 text-indigo-400 truncate">{activeInspectorLog.service}</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 py-0.5 border-b border-slate-950">
-                    <span className="text-slate-600">Trace ID</span>
-                    <span className="col-span-2 text-indigo-300 select-all truncate">{activeInspectorLog.traceId}</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 py-0.5">
-                    <span className="text-slate-600">Performance</span>
-                    <span className="col-span-2 text-emerald-400 truncate">
-                      {activeInspectorLog.metadata.executionMs}ms (Host: {activeInspectorLog.metadata.host})
+          const filteredProperties = !drawerSearch.trim() 
+            ? props 
+            : props.filter(p => 
+                p.key.toLowerCase().includes(drawerSearch.toLowerCase()) || 
+                String(p.val).toLowerCase().includes(drawerSearch.toLowerCase())
+              );
+
+          const rawObj = activeInspectorLog.metadata?.raw || activeInspectorLog;
+          const fullJSONString = JSON.stringify(rawObj, null, 2);
+          const filteredJSONString = !drawerSearch.trim()
+            ? fullJSONString
+            : (() => {
+                const jsonLines = fullJSONString.split('\n');
+                const query = drawerSearch.toLowerCase();
+                const filteredLines = jsonLines.filter(line => line.toLowerCase().includes(query));
+                return filteredLines.length > 0
+                  ? `// Filtered matches for "${drawerSearch}":\n` + filteredLines.join('\n')
+                  : `// No matches found for "${drawerSearch}" inside JSON schema payload`;
+              })();
+
+          return (
+            <div className="border-t border-slate-900 bg-slate-950 flex flex-col h-72 shrink-0 transition-all duration-200 overflow-hidden">
+              <div className="h-10 border-b border-slate-900 px-4 flex items-center justify-between bg-slate-950">
+                <div className="flex items-center gap-2 overflow-hidden flex-1 mr-4">
+                  <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 shrink-0">
+                    Trace Details
+                  </span>
+                  <span className="text-[9px] px-1.5 py-0.2 border border-slate-900 rounded font-bold font-mono text-indigo-400 shrink-0">
+                    {activeInspectorLog.level}
+                  </span>
+                  <div className="h-4 w-px bg-slate-900 mx-1 hidden md:block"></div>
+                  
+                  {/* Search Filter Input inside Drawer Header */}
+                  <div className="relative max-w-xs flex-1 hidden md:block">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none text-slate-650">
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
                     </span>
+                    <input 
+                      type="text" 
+                      value={drawerSearch}
+                      onChange={(e) => setDrawerSearch(e.target.value)}
+                      placeholder="Filter properties or payload fields..." 
+                      className="w-full pl-7 pr-2 py-0.5 bg-slate-900 text-slate-300 placeholder-slate-650 rounded border border-slate-850 focus:outline-none focus:border-slate-800 text-[10px] font-mono transition"
+                    />
                   </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={copyRawLogJSON}
+                    className="flex items-center gap-1 bg-slate-900 hover:bg-slate-800 text-slate-300 px-2.5 py-1 rounded text-xs transition border border-slate-800 font-mono"
+                  >
+                    {copySuccess ? "Copied" : "Copy Payload"}
+                  </button>
+                  <button 
+                    onClick={() => setSelectedLogId(null)}
+                    className="text-slate-500 hover:text-slate-300 transition p-1 hover:bg-slate-900 rounded"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
                 </div>
               </div>
 
-              {/* Structured JSON Documents code block */}
-              <div className="flex flex-col h-full min-h-[120px]">
-                <h4 className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">JSON Schema Payload</h4>
-                <pre className="flex-1 bg-slate-950 rounded p-3 border border-slate-900 font-mono text-slate-300 text-[10px] overflow-auto max-h-36">
-                  {JSON.stringify(activeInspectorLog, null, 2)}
-                </pre>
+              <div className="flex-1 p-4 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Visual Metadata Properties */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Properties</h4>
+                    {drawerSearch && (
+                      <span className="text-[9px] text-slate-500 font-mono">
+                        {filteredProperties.length} matches
+                      </span>
+                    )}
+                  </div>
+                  <div className="bg-slate-900/20 rounded p-3 border border-slate-900 space-y-2 text-xs font-mono text-slate-400 max-h-36 overflow-y-auto">
+                    {filteredProperties.map((prop, idx) => (
+                      <div key={idx} className="grid grid-cols-3 gap-2 py-0.5 border-b border-slate-950 last:border-0">
+                        <span className="text-slate-600">{prop.key}</span>
+                        <span className="col-span-2 text-slate-300 select-all truncate" title={String(prop.val)}>
+                          {prop.val}
+                        </span>
+                      </div>
+                    ))}
+                    {filteredProperties.length === 0 && (
+                      <div className="text-center py-4 text-slate-650 text-[10px]">
+                        No matching properties found
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Structured JSON Documents code block */}
+                <div className="flex flex-col h-full min-h-[120px]">
+                  <h4 className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">JSON Schema Payload</h4>
+                  <pre className="flex-1 bg-slate-950 rounded p-3 border border-slate-900 font-mono text-slate-300 text-[10px] overflow-auto max-h-36">
+                    {filteredJSONString}
+                  </pre>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Status Footer */}
         <footer className="h-8 border-t border-slate-900 px-4 bg-slate-950 flex items-center justify-between text-[10px] text-slate-600 shrink-0">
