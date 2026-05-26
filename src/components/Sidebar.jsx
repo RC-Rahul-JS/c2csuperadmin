@@ -56,6 +56,7 @@ import {
   HiClipboardList,
   HiUsers,
   HiTerminal,
+  HiDeviceMobile,
 } from 'react-icons/hi';
 import { MdAccountTree } from "react-icons/md";
 
@@ -74,6 +75,7 @@ const Sidebar = () => {
     { name: 'Accounting', path: '/accounting', icon: MdAccountTree  },
     { name: 'Reports', path: '/reports', icon: HiChartBar },
     { name: 'Monitoring', path: '/monitoring', icon: HiTerminal },
+    { name: 'App Monitoring', path: '/app-monitoring', icon: HiDeviceMobile },
     // { name: 'Settings', path: '/settings', icon: HiCog },
     //  { name: "Designation", path: "/designation", icon: HiBriefcase },
   // { name: "Employee Creation", path: "/empcreation", icon: HiUserAdd },

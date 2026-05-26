@@ -49,6 +49,8 @@ import PaymentReq from './pages/Payments/PaymentReq';
 import MedicineOrders from './pages/MedicineOrders/MedicineOrders';
 import Users from './pages/Users/Users';
 import Monitoring from './pages/Monitoring/Monitoring';
+import AppMonitoring from './pages/Monitoring/AppMonitoring';
+
 
 function App() {
   return (
@@ -113,6 +115,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="" element={<Dashboard/>} />
           <Route path="/monitoring" element={<Monitoring />} />
+          <Route path="/app-monitoring" element={<AppMonitoring />} />
  
  {/* NEwwwwwww*/}
 {/*  
