@@ -13,7 +13,7 @@ import Fees from './pages/setting/Fees';
 import Slots from './pages/setting/Slots';
 import CalendarWithTimeSlots from './pages/setting/CalendarWithTimeSlots';
 import Tabs_layout from './Layout/Tabs_layout';
-import { doctortabs, hospital_tabs, ledger_tabs, payments_tabs, setting_tabs, staff_tabs } from './utils/tabs';
+import { doctortabs, hospital_tabs, ledger_tabs, payments_tabs, setting_tabs, staff_tabs, app_appearance_tabs } from './utils/tabs';
 import AddHospital from './pages/Hosiptals/AddHospital';
 import ViewHospitals from './pages/Hosiptals/ViewHopitals';
 import Applications from './pages/Doctors/Applications'
@@ -24,6 +24,8 @@ import HospitalForm from './pages/Doctors/HospitalForm';
 import HospitalList from './pages/Doctors/HospitalList';
 import MedicalForm from './pages/Doctors/MedicalForm';
 import MedicalList from './pages/Doctors/MedicalList';
+import PathologyForm from './pages/Doctors/PathologyForm';
+import PathologyList from './pages/Doctors/PathologyList';
 import Appointment from './pages/Appointment/Appointment';
 import Payments from './pages/Payments/Payments';
 import Reports from './pages/Reports/Reports';
@@ -50,7 +52,8 @@ import MedicineOrders from './pages/MedicineOrders/MedicineOrders';
 import Users from './pages/Users/Users';
 import Monitoring from './pages/Monitoring/Monitoring';
 import AppMonitoring from './pages/Monitoring/AppMonitoring';
-import AppAppearance from './pages/AppAppearance/AppAppearance';
+import AppBanners from './pages/AppAppearance/AppBanners';
+import AppBackground from './pages/AppAppearance/AppBackground';
 
 function App() {
   return (
@@ -74,6 +77,8 @@ function App() {
                 <Route path="hospital_list" element={<HospitalList />} />
                 <Route path="medical_form" element={<MedicalForm />} />
                 <Route path="medical_list" element={<MedicalList />} />
+                <Route path="pathology_form" element={<PathologyForm />} />
+                <Route path="pathology_list" element={<PathologyList />} />
             </Route>
             <Route path="/hospitals" element={<Tabs_layout tabs={hospital_tabs} />} >
                 <Route path="" element={<ViewHospitals />} />
@@ -116,7 +121,10 @@ function App() {
           <Route path="" element={<Dashboard/>} />
           <Route path="/monitoring" element={<Monitoring />} />
           <Route path="/app-monitoring" element={<AppMonitoring />} />
-          <Route path="/app-appearance" element={<AppAppearance />} />
+          <Route path="/app-appearance" element={<Tabs_layout tabs={app_appearance_tabs} />} >
+              <Route path="" element={<AppBanners />} />
+              <Route path="background" element={<AppBackground />} />
+          </Route>
  
  {/* NEwwwwwww*/}
 {/*  

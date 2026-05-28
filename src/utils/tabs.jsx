@@ -11,6 +11,8 @@ export const doctortabs = [
     { label: 'Dr List', route: 'dr_list' },
     { label: 'Medical Form', route: 'medical_form' },
     { label: 'Medical List', route: 'medical_list' },
+    { label: 'Pathology Form', route: 'pathology_form' },
+    { label: 'Pathology List', route: 'pathology_list' },
   ];
 export const hospital_tabs = [
     { label: 'All Hospitals', route: '' },
@@ -43,3 +45,7 @@ export const payments_tabs = [
     { label: 'Excel Uploader', route: 'excel_uploader' },
     { label: 'PAYMENT REQUEST', route: 'payment_req' },
   ];
+export const app_appearance_tabs = [
+    { label: 'App Banners', route: '' },
+    { label: 'App Background', route: 'background' },
+];

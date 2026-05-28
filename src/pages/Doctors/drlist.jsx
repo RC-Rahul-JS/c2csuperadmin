@@ -476,21 +476,21 @@ const List = ({ submissions, onAction }) => {
 
               {/* Actions Footer */}
               <div className="bg-slate-50 p-6 md:p-8 flex flex-col sm:flex-row items-center justify-end gap-4 border-t border-slate-100">
-                {selectedForm.status !== 'Rejected' && (
-                  <button
-                    onClick={() => handleAction(selectedForm.id, 'Rejected')}
-                    className="w-full sm:w-auto px-10 py-4 bg-white border-2 border-red-100 text-red-600 hover:bg-red-50 hover:border-red-600 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
-                  >
-                    ✗ Reject Profile
-                  </button>
-                )}
-                {selectedForm.status !== 'Approved' && (
-                  <button
-                    onClick={() => handleAction(selectedForm.id, 'Approved')}
-                    className="w-full sm:w-auto px-10 py-4 bg-blue-600 hover:bg-blue-800 text-white rounded-2xl shadow-xl shadow-blue-200 text-[10px] font-black uppercase tracking-widest transition-all"
-                  >
-                    ✓ Approve Onboarding
-                  </button>
+                {(!selectedForm.status || selectedForm.status.toLowerCase() === 'pending') && (
+                  <>
+                    <button
+                      onClick={() => handleAction(selectedForm.id, 'Rejected')}
+                      className="w-full sm:w-auto px-10 py-4 bg-white border-2 border-red-100 text-red-600 hover:bg-red-50 hover:border-red-600 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
+                    >
+                      ✗ Reject Profile
+                    </button>
+                    <button
+                      onClick={() => handleAction(selectedForm.id, 'Approved')}
+                      className="w-full sm:w-auto px-10 py-4 bg-blue-600 hover:bg-blue-800 text-white rounded-2xl shadow-xl shadow-blue-200 text-[10px] font-black uppercase tracking-widest transition-all"
+                    >
+                      ✓ Approve Onboarding
+                    </button>
+                  </>
                 )}
               </div>
             </div>
