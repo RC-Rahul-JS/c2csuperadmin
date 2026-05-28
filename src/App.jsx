@@ -50,7 +50,7 @@ import MedicineOrders from './pages/MedicineOrders/MedicineOrders';
 import Users from './pages/Users/Users';
 import Monitoring from './pages/Monitoring/Monitoring';
 import AppMonitoring from './pages/Monitoring/AppMonitoring';
-
+import AppAppearance from './pages/AppAppearance/AppAppearance';
 
 function App() {
   return (
@@ -116,6 +116,7 @@ function App() {
           <Route path="" element={<Dashboard/>} />
           <Route path="/monitoring" element={<Monitoring />} />
           <Route path="/app-monitoring" element={<AppMonitoring />} />
+          <Route path="/app-appearance" element={<AppAppearance />} />
  
  {/* NEwwwwwww*/}
 {/*  
