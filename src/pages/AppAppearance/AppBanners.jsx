@@ -6,7 +6,7 @@ const AppBanners = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState('');
 
-  const apiBase = import.meta.env.VITE_API_URL || 'http://192.168.29.145:5000';
+  const apiBase = 'https://api.care2connect.in'; // Force using the new URL without restarting server
 
   const fetchBanners = async () => {
     try {
@@ -33,31 +33,123 @@ const AppBanners = () => {
     fetchBanners();
   }, []);
 
+  // Compress an image file using canvas to stay under Nginx's size limit
+  const compressImage = (file) => {
+    return new Promise((resolve) => {
+      const isVideo = file.type.startsWith('video/');
+      // Videos cannot be compressed on the frontend — return as-is
+      if (isVideo) { resolve(file); return; }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let { width, height } = img;
+
+          // Scale down if image is very large (max 1920px wide)
+          const MAX_W = 1920;
+          if (width > MAX_W) {
+            height = Math.round((height * MAX_W) / width);
+            width = MAX_W;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Try quality 0.85 first, then go lower if still too big
+          const tryCompress = (quality) => {
+            canvas.toBlob((blob) => {
+              if (blob.size > 900 * 1024 && quality > 0.3) {
+                // Still too large, reduce quality further
+                tryCompress(quality - 0.1);
+              } else {
+                const compressed = new File([blob], file.name, { type: 'image/jpeg' });
+                console.log(`Compressed: ${(file.size/1024/1024).toFixed(2)}MB → ${(compressed.size/1024/1024).toFixed(2)}MB`);
+                resolve(compressed);
+              }
+            }, 'image/jpeg', quality);
+          };
+          tryCompress(0.85);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
   const uploadToAWS = async (file) => {
     try {
       setIsUploading(true);
-      setUploadStatus(`Uploading ${file.name}...`);
-      
+
+      const isVideo = file.type.startsWith('video/');
+      const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+
+      // Block large videos — backend Nginx cannot accept them without server config change
+      if (isVideo && file.size > 900 * 1024) {
+        throw new Error(
+          `Video file is ${fileSizeMB}MB — too large for the server.\n\n` +
+          `To fix this permanently, ask your server admin to set:\n` +
+          `"client_max_body_size 2048M;" in Nginx config.\n\n` +
+          `For now, please use a video under 900KB.`
+        );
+      }
+
+      let fileToUpload = file;
+      if (!isVideo) {
+        setUploadStatus(`Compressing image...`);
+        fileToUpload = await compressImage(file);
+      }
+
+      setUploadStatus(`Uploading ${fileToUpload.name} (${(fileToUpload.size/1024/1024).toFixed(2)}MB)...`);
+
       const formData = new FormData();
-      
-      // For banners, standard unique name logic from dr.jsx
-      const fileName = `${Date.now()}_${Math.floor(Math.random() * 10000)}_${file.name}`;
-      formData.append('image', file, fileName);
+      const fileName = `${Date.now()}_${Math.floor(Math.random() * 10000)}_${fileToUpload.name}`;
+      formData.append('image', fileToUpload, fileName);
       formData.append('folder', 'banner');
 
-      const apiBase = import.meta.env.VITE_API_URL || 'http://192.168.29.145:5000';
-      
-      // API used here for uploading banner images/videos to AWS S3
-      const res = await fetch(
-        `${apiBase}/duniyape/aws/upload`,
-        { method: "POST", body: formData }
-      );
-      
-      const data = await res.json();
-      return data?.url;
+      // Use XMLHttpRequest for real upload progress tracking on large files
+      const url = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/duniyape/aws/upload');
+
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const pct = Math.round((e.loaded / e.total) * 100);
+            setUploadStatus(`Uploading... ${pct}%`);
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status === 413) {
+            reject(new Error(
+              `File still too large for server (${fileSizeMB}MB).\n` +
+              `Fix Nginx: set "client_max_body_size 2048M;" in your nginx.conf`
+            ));
+            return;
+          }
+          if (xhr.status !== 200) {
+            reject(new Error(`Upload failed with status: ${xhr.status}`));
+            return;
+          }
+          try {
+            const data = JSON.parse(xhr.responseText);
+            resolve(data?.url);
+          } catch {
+            reject(new Error('Server returned invalid response (not JSON).'));
+          }
+        };
+
+        xhr.onerror = () => reject(new Error('Network error during upload. Check your connection.'));
+        xhr.send(formData);
+      });
+
+      return url;
     } catch (err) {
       console.error("S3 Error:", err);
-      alert("Failed to upload file to AWS");
+      alert(err.message || "Failed to upload file to AWS");
       return null;
     } finally {
       setIsUploading(false);
@@ -125,11 +217,12 @@ const AppBanners = () => {
 
       {/* Main Content Area */}
       <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 p-8 border border-slate-100 relative overflow-hidden">
-        {/* Loading Overlay */}
+        {/* Loading Overlay with Progress */}
         {isUploading && (
-          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center rounded-3xl">
-            <div className="w-16 h-16 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mb-4"></div>
-            <p className="font-bold text-purple-700 animate-pulse">{uploadStatus}</p>
+          <div className="absolute inset-0 bg-white/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center rounded-3xl">
+            <div className="w-20 h-20 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mb-5"></div>
+            <p className="font-bold text-purple-700 text-lg">{uploadStatus || 'Processing...'}</p>
+            <p className="text-xs text-slate-400 mt-2">Please do not close this page</p>
           </div>
         )}
 

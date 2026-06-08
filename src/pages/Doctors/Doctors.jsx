@@ -19,7 +19,7 @@ useEffect(() => {
   (async () => {
     try {
       showLoader();
-      const res = await axios.get(`${API_BASE_URL || 'http://192.168.29.145:5000'}/doctor_list`);
+      const res = await axios.get(`${API_BASE_URL || 'https://api.care2connect.in'}/doctor_list`);
       const response = res.data;
 
       console.log(response)

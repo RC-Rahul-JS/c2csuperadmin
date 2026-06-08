@@ -143,7 +143,7 @@ const PathologyForm = ({ onSubmitSuccess }) => {
     }
 
     try {
-      const res = await fetch(`http://192.168.29.145:5000/duniyape/aws/upload`, { method: "POST", body: formData });
+      const res = await fetch(`https://api.care2connect.in/duniyape/aws/upload`, { method: "POST", body: formData });
       const data = await res.json();
       return data?.url;
     } catch (err) {

@@ -24,7 +24,7 @@ const AppBackground = () => {
       formData.append('image', file, 'backgroundimage');
       formData.append('folder', 'background');
 
-      const apiBase = import.meta.env.VITE_API_URL || 'http://192.168.29.145:5000';
+      const apiBase = import.meta.env.VITE_API_URL || 'https://api.care2connect.in';
       
       // API used here for uploading background image to AWS S3
       const res = await fetch(

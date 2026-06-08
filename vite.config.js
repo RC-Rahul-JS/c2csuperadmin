@@ -7,16 +7,21 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     allowedHosts: [
-      "http://192.168.29.145:5000", // 👈 Add your ngrok host here
+      "https://api.care2connect.in", // 👈 Add your ngrok host here
     ],
     proxy: {
       '/c2c_app': {
-        target: 'http://192.168.29.145:5000',
+        target: 'https://api.care2connect.in',
         changeOrigin: true,
         secure: false,
       },
       '/demo_doctor': {
-        target: 'http://192.168.29.145:5000',
+        target: 'https://api.care2connect.in',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/duniyape': {
+        target: 'https://api.care2connect.in',
         changeOrigin: true,
         secure: false,
       }

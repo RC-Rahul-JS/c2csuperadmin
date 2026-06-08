@@ -145,7 +145,7 @@ const HospitalForm = ({ onSubmitSuccess }) => {
 
     try {
       const res = await fetch(
-        `http://192.168.29.145:5000/duniyape/aws/upload`,
+        `https://api.care2connect.in/duniyape/aws/upload`,
         { method: "POST", body: formData }
       );
       const data = await res.json();
@@ -225,10 +225,10 @@ const HospitalForm = ({ onSubmitSuccess }) => {
         ...documentsUrls
       };
 
-      console.log("📤 [Hospital Onboarding] POSTing flat payload to http://192.168.29.145:5000/c2c_app/hospital/request:", apiPayload);
+      console.log("📤 [Hospital Onboarding] POSTing flat payload to https://api.care2connect.in/c2c_app/hospital/request:", apiPayload);
 
       let response = null;
-      let endpoint = "http://192.168.29.145:5000/c2c_app/hospital/request";
+      let endpoint = "https://api.care2connect.in/c2c_app/hospital/request";
 
       try {
         response = await fetch(endpoint, {
@@ -246,7 +246,7 @@ const HospitalForm = ({ onSubmitSuccess }) => {
 
       // If primary 404s or fails, try plural fallback
       if (!response || response.status === 404) {
-        endpoint = "http://192.168.29.145:5000/c2c_app/hospital/requests";
+        endpoint = "https://api.care2connect.in/c2c_app/hospital/requests";
         console.log(`🔄 [Hospital Onboarding] Primary endpoint returned 404. Attempting fallback plural endpoint: ${endpoint}...`);
         try {
           response = await fetch(endpoint, {

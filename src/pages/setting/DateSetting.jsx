@@ -33,7 +33,7 @@
 //    useEffect(() => {
 //     const fetchdata = async () => {
 //       try {
-//     const response = await axios.get(`http://192.168.29.145:5000/get_doctor/${id}/`);
+//     const response = await axios.get(`https://api.care2connect.in/get_doctor/${id}/`);
 //     console.log(response.data); // yaha doctors ka list milega
 //      const res = response.data;
 //  setAvailableDays(res.date.parameter.week.map(item => item.name));

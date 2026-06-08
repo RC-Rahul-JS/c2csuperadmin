@@ -53,7 +53,7 @@ const Form = ({ onSubmitSuccess }) => {
   }, []);
 
   useEffect(() => {
-    const apiBase = import.meta.env.VITE_API_URL || 'http://192.168.29.145:5000';
+    const apiBase = import.meta.env.VITE_API_URL || 'https://api.care2connect.in';
     console.log(`🚀 [Doctor Onboarding] Fetching all hospital requests to build Approved Hospitals list from ${apiBase}/c2c_app/hospital/requests...`);
     fetch(`${apiBase}/c2c_app/hospital/requests`, {
       headers: {
@@ -114,7 +114,7 @@ const Form = ({ onSubmitSuccess }) => {
   useEffect(() => {
     if (id) {
       console.log(`🔍 [Doctor Edit] Fetching details for Doctor ID: ${id}`);
-      fetch(`${import.meta.env.VITE_API_URL || 'http://192.168.29.145:5000'}/get_doctor/${id}/`, {
+      fetch(`${import.meta.env.VITE_API_URL || 'https://api.care2connect.in'}/get_doctor/${id}/`, {
         headers: {
           'ngrok-skip-browser-warning': 'true'
         }
@@ -232,7 +232,7 @@ const Form = ({ onSubmitSuccess }) => {
     }
 
     try {
-      const apiBase = import.meta.env.VITE_API_URL || 'http://192.168.29.145:5000';
+      const apiBase = import.meta.env.VITE_API_URL || 'https://api.care2connect.in';
       const res = await fetch(
         `${apiBase}/duniyape/aws/upload`,
         { method: "POST", body: formData }
@@ -273,7 +273,7 @@ const Form = ({ onSubmitSuccess }) => {
 
       console.log(`📤 [Doctor Edit] Quick-saving fees for ID: ${id}`, updatePayload);
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://192.168.29.145:5000'}/update_user/${id}/`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.care2connect.in'}/update_user/${id}/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -352,7 +352,7 @@ const Form = ({ onSubmitSuccess }) => {
         ...documentsUrls
       };
 
-      const apiBase = import.meta.env.VITE_API_URL || 'http://192.168.29.145:5000';
+      const apiBase = import.meta.env.VITE_API_URL || 'https://api.care2connect.in';
       const requestUrl = id 
         ? `${apiBase}/update_user/${id}/`
         : `${apiBase}/c2c_app/doctor/request`;

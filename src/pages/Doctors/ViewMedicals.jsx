@@ -9,7 +9,7 @@ const ViewMedicals = () => {
     const fetchMedicals = async () => {
       try {
         setIsLoading(true);
-        const res = await fetch("http://192.168.29.145:5000/c2c_app/medical/requests", {
+        const res = await fetch("https://api.care2connect.in/c2c_app/medical/requests", {
           headers: {
             'ngrok-skip-browser-warning': 'true'
           }

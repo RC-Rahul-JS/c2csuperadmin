@@ -49,7 +49,7 @@ const MedicalForm = ({ onSubmitSuccess }) => {
   useEffect(() => {
     // 1. Fetch Approved Doctors
     setIsLoadingDoctors(true);
-    fetch('http://192.168.29.145:5000/c2c_app/doctor/requests', {
+    fetch('https://api.care2connect.in/c2c_app/doctor/requests', {
       headers: {
         'ngrok-skip-browser-warning': 'true'
       }
@@ -98,7 +98,7 @@ const MedicalForm = ({ onSubmitSuccess }) => {
 
     // 2. Fetch Approved Hospitals
     setIsLoadingHospitals(true);
-    fetch('http://192.168.29.145:5000/c2c_app/hospital/requests', {
+    fetch('https://api.care2connect.in/c2c_app/hospital/requests', {
       headers: {
         'ngrok-skip-browser-warning': 'true'
       }
@@ -183,7 +183,7 @@ const MedicalForm = ({ onSubmitSuccess }) => {
     };
 
     try {
-      const response = await fetch('http://192.168.29.145:5000/c2c_app/medical/request', {
+      const response = await fetch('https://api.care2connect.in/c2c_app/medical/request', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

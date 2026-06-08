@@ -54,6 +54,7 @@ import Monitoring from './pages/Monitoring/Monitoring';
 import AppMonitoring from './pages/Monitoring/AppMonitoring';
 import AppBanners from './pages/AppAppearance/AppBanners';
 import AppBackground from './pages/AppAppearance/AppBackground';
+import Notification from './pages/Notification/Notification';
 
 function App() {
   return (
@@ -121,6 +122,7 @@ function App() {
           <Route path="" element={<Dashboard/>} />
           <Route path="/monitoring" element={<Monitoring />} />
           <Route path="/app-monitoring" element={<AppMonitoring />} />
+          <Route path="/notifications" element={<Notification />} />
           <Route path="/app-appearance" element={<Tabs_layout tabs={app_appearance_tabs} />} >
               <Route path="" element={<AppBanners />} />
               <Route path="background" element={<AppBackground />} />
